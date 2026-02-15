@@ -1,0 +1,8 @@
+html,
+body,
+#root {
+  font-family: var(--font-main);
+  background: var(--bg-page);
+  margin: 0;
+  padding: 0;
+}
