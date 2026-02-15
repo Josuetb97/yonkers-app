@@ -1,7 +1,8 @@
 /**
  * Yonkers Backend - server.js
- * Express + Mock IA + Search API (ESTABLE)
+ * Express + Mock IA + Search API (PRODUCTION READY)
  */
+
 const express = require("express");
 const cors = require("cors");
 const multer = require("multer");
@@ -9,8 +10,25 @@ const multer = require("multer");
 const app = express();
 const upload = multer({ dest: "uploads/" });
 
-app.use(cors());
+/* =========================
+   MIDDLEWARE
+========================= */
+
+// 🔐 CORS (puedes restringir luego a tu dominio Vercel)
+app.use(
+  cors({
+    origin: "*",
+  })
+);
+
 app.use(express.json());
+
+/* =========================
+   HEALTH CHECK (IMPORTANTE PARA RENDER)
+========================= */
+app.get("/", (req, res) => {
+  res.json({ status: "Backend Yonkers activo 🚀" });
+});
 
 /* =========================
    MOCK DATA
@@ -77,28 +95,40 @@ app.get("/api/pieces", (req, res) => {
 /* =========================
    SEARCH BY PHOTO (MOCK IA)
 ========================= */
-app.post("/api/search/photo", upload.single("image"), async (req, res) => {
-  try {
-    console.log("📸 Foto recibida:", req.file?.originalname);
+app.post(
+  "/api/search/photo",
+  upload.single("image"),
+  async (req, res) => {
+    try {
+      console.log("📸 Foto recibida:", req.file?.originalname);
 
-    // Simulación IA
-    await new Promise((r) => setTimeout(r, 800));
+      // Simulación IA
+      await new Promise((r) => setTimeout(r, 800));
 
-    res.json({
-      query: "caja automática toyota corolla",
-    });
-  } catch (err) {
-    console.error("❌ Error en búsqueda por foto", err);
-    res.status(500).json({ error: "Error procesando imagen" });
+      res.json({
+        query: "caja automática toyota corolla",
+      });
+    } catch (err) {
+      console.error("❌ Error en búsqueda por foto", err);
+      res.status(500).json({ error: "Error procesando imagen" });
+    }
   }
+);
+
+/* =========================
+   GLOBAL ERROR HANDLER
+========================= */
+app.use((err, req, res, next) => {
+  console.error("❌ Error no controlado:", err);
+  res.status(500).json({ error: "Error inesperado del servidor" });
 });
 
 /* =========================
    START SERVER
 ========================= */
-const PORT = 3001;
+
+const PORT = process.env.PORT || 3001;
+
 app.listen(PORT, () => {
-  console.log(
-    `🚀 Backend Yonkers corriendo en http://localhost:${PORT}`
-  );
+  console.log(`🚀 Backend Yonkers corriendo en puerto ${PORT}`);
 });
