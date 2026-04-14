@@ -199,12 +199,18 @@ export default function App() {
   const [cartOpen, setCartOpen] = useState(false);
   const { cartItems, removeFromCart, clearCart } = useCart();
 
-  // Redirigir cualquier path del subdominio admin → /admin
+  // En subdominio admin: redirigir a /admin y abrir login si no hay sesión
   useEffect(() => {
-    if (IS_ADMIN_SUBDOMAIN && window.location.pathname !== "/admin") {
+    if (!IS_ADMIN_SUBDOMAIN) return;
+    if (window.location.pathname !== "/admin") {
       window.location.replace("/admin");
+      return;
     }
-  }, []);
+    // Si ya terminó de cargar y no hay usuario, abrir login
+    if (!loading && !user) {
+      setLoginOpen(true);
+    }
+  }, [loading, user]);
 
   /* =========================
      LOGIN GLOBAL

@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
 import SellerOnboardingModal from "../../components/SellerOnboardingModal";
 
-const API = (import.meta.env.VITE_API_URL || "") + "/api";
+const API = import.meta.env.VITE_API_URL || "/api";
 
 /* ─────────────────────────────────────────────────────────────
    FIELD CONFIG
