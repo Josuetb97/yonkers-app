@@ -34,10 +34,10 @@ export default function ImageCarousel({ images = [] }) {
 
       {imgs.length > 1 && (
         <>
-          <button style={{ ...styles.nav, left: 8 }} onClick={prev}>
+          <button style={{ ...styles.nav, left: 8 }} onClick={prev} aria-label="Imagen anterior" type="button">
             ‹
           </button>
-          <button style={{ ...styles.nav, right: 8 }} onClick={next}>
+          <button style={{ ...styles.nav, right: 8 }} onClick={next} aria-label="Siguiente imagen" type="button">
             ›
           </button>
 

@@ -1,161 +1,193 @@
-import { memo, useEffect, useRef } from "react";
-import mapboxgl from "mapbox-gl";
-import "mapbox-gl/dist/mapbox-gl.css";
+import {
+  GoogleMap,
+  Marker,
+  InfoWindow,
+  useJsApiLoader,
+  DirectionsRenderer,
+} from "@react-google-maps/api";
+import { useEffect, useState, useCallback } from "react";
 
-mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN;
+const containerStyle = {
+  width: "100%",
+  height: "100%",
+};
 
-function NearbyMap({
+export default function NearbyMap({
   pieces = [],
   center,
   selectedId,
   onSelectId,
 }) {
-  const mapRef = useRef(null);
-  const containerRef = useRef(null);
-  const markersRef = useRef({});
-  const initializedRef = useRef(false);
+  const { isLoaded, loadError } = useJsApiLoader({
+    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_KEY,
+  });
+
+  const [selectedPiece, setSelectedPiece] = useState(null);
+  const [directions, setDirections] = useState(null);
 
   /* =========================
-     INIT MAP (UNA SOLA VEZ)
+     Sincronizar pieza seleccionada
   ========================= */
   useEffect(() => {
-    if (initializedRef.current) return;
-    if (!containerRef.current) return;
-
-    const map = new mapboxgl.Map({
-      container: containerRef.current,
-      // ✅ STYLE SEGURO SIN TRAFFIC NI INCIDENTS
-      style: "mapbox://styles/mapbox/dark-v11?optimize=true",
-      center: [center.lng, center.lat],
-      zoom: 12,
-    });
-
-    mapRef.current = map;
-    initializedRef.current = true;
-
-    /* 🔵 Punto azul usuario */
-    const userEl = document.createElement("div");
-    userEl.style.width = "18px";
-    userEl.style.height = "18px";
-    userEl.style.borderRadius = "50%";
-    userEl.style.background = "#2563eb";
-    userEl.style.boxShadow = "0 0 0 6px rgba(37,99,235,0.3)";
-    userEl.style.animation = "pulse 2s infinite";
-
-    new mapboxgl.Marker(userEl)
-      .setLngLat([center.lng, center.lat])
-      .addTo(map);
-
-    return () => {
-      map.remove();
-      mapRef.current = null;
-      initializedRef.current = false;
-    };
-  }, [center]);
-
-  /* =========================
-     CREAR / ACTUALIZAR MARKERS
-  ========================= */
-  useEffect(() => {
-    if (!mapRef.current) return;
-
-    const map = mapRef.current;
-    const existingMarkers = markersRef.current;
-
-    for (const p of pieces) {
-      if (!p?.lat || !p?.lng) continue;
-
-      if (!existingMarkers[p.id]) {
-        const el = document.createElement("div");
-
-        el.style.width = "14px";
-        el.style.height = "14px";
-        el.style.borderRadius = "50%";
-        el.style.background =
-          p.status === "alta" ? "#22c55e" : "#64748b";
-        el.style.border = "3px solid white";
-        el.style.boxShadow = "0 2px 6px rgba(0,0,0,.4)";
-        el.style.cursor = "pointer";
-        el.style.transition = "all .2s ease";
-
-        el.onclick = () => {
-          onSelectId?.(p.id);
-        };
-
-        const marker = new mapboxgl.Marker(el)
-          .setLngLat([p.lng, p.lat])
-          .addTo(map);
-
-        existingMarkers[p.id] = marker;
-      }
-    }
-
-    // Eliminar marcadores que ya no existen
-    Object.keys(existingMarkers).forEach((id) => {
-      if (!pieces.find((p) => String(p.id) === String(id))) {
-        existingMarkers[id].remove();
-        delete existingMarkers[id];
-      }
-    });
-  }, [pieces, onSelectId]);
-
-  /* =========================
-     FOCUS + HIGHLIGHT
-  ========================= */
-  useEffect(() => {
-    if (!mapRef.current || !selectedId) return;
-
-    const map = mapRef.current;
-
-    const selectedPiece = pieces.find(
-      (p) => p.id === selectedId
-    );
-
-    if (!selectedPiece?.lat || !selectedPiece?.lng) return;
-
-    map.flyTo({
-      center: [selectedPiece.lng, selectedPiece.lat],
-      zoom: 15,
-      speed: 0.8,
-      curve: 1.4,
-    });
-
-    Object.entries(markersRef.current).forEach(([id, m]) => {
-      const el = m.getElement();
-
-      if (String(id) === String(selectedId)) {
-        el.style.transform = "scale(1.4)";
-        el.style.zIndex = "10";
-        el.style.background = "#facc15";
-      } else {
-        el.style.transform = "scale(1)";
-        el.style.zIndex = "1";
-        el.style.background =
-          pieces.find((p) => String(p.id) === String(id))
-            ?.status === "alta"
-            ? "#22c55e"
-            : "#64748b";
-      }
-    });
+    if (!selectedId) return;
+    const p = pieces.find((x) => x.id === selectedId);
+    if (p) setSelectedPiece(p);
   }, [selectedId, pieces]);
 
+  /* =========================
+     Fallback: calcular ruta interna
+  ========================= */
+  const handleDirections = useCallback(
+    (piece) => {
+      if (!window.google) return;
+
+      const directionsService =
+        new window.google.maps.DirectionsService();
+
+      directionsService.route(
+        {
+          origin: center,
+          destination: {
+            lat: piece.lat,
+            lng: piece.lng,
+          },
+          travelMode: window.google.maps.TravelMode.DRIVING,
+        },
+        (result, status) => {
+          if (status === "OK") {
+            setDirections(result);
+          } else {
+            console.error("Directions error:", status);
+          }
+        }
+      );
+    },
+    [center]
+  );
+
+  /* =========================
+     Abrir Google Maps externo (RECOMENDADO)
+  ========================= */
+  const openExternalMaps = (piece) => {
+    const url = `https://www.google.com/maps/dir/?api=1&destination=${piece.lat},${piece.lng}`;
+    window.open(url, "_blank");
+  };
+
+  /* =========================
+     Estados de carga
+  ========================= */
+  if (loadError) return <p>Error cargando mapa</p>;
+  if (!isLoaded) return <p>Cargando mapa...</p>;
+
   return (
-    <div
-      ref={containerRef}
-      style={{
-        width: "100%",
-        height: "100%",
+    <GoogleMap
+      mapContainerStyle={containerStyle}
+      center={center}
+      zoom={13}
+      options={{
+        fullscreenControl: true,
+        mapTypeControl: false,
+        streetViewControl: false,
+        mapTypeId: "roadmap", // ✅ mapa clásico
       }}
-    />
+    >
+      {/* =========================
+         Usuario
+      ========================= */}
+      <Marker
+        position={center}
+        icon={{
+          url: "http://maps.google.com/mapfiles/ms/icons/blue-dot.png",
+        }}
+      />
+
+      {/* =========================
+         Yonkers
+      ========================= */}
+      {pieces.map((piece) => (
+        <Marker
+          key={piece.id}
+          position={{ lat: piece.lat, lng: piece.lng }}
+          icon={{
+            url:
+              selectedId === piece.id
+                ? "http://maps.google.com/mapfiles/ms/icons/blue-dot.png"
+                : "http://maps.google.com/mapfiles/ms/icons/green-dot.png",
+          }}
+          onClick={() => {
+            onSelectId(piece.id);
+            setSelectedPiece(piece);
+            setDirections(null);
+          }}
+        />
+      ))}
+
+      {/* =========================
+         Info Window
+      ========================= */}
+      {selectedPiece && (
+        <InfoWindow
+          position={{
+            lat: selectedPiece.lat,
+            lng: selectedPiece.lng,
+          }}
+          onCloseClick={() => {
+            setSelectedPiece(null);
+            setDirections(null);
+          }}
+        >
+          <div style={{ maxWidth: 220 }}>
+            <h4 style={{ margin: 0, color: "#000", fontWeight: 700 }}>
+              {selectedPiece.yonker}
+            </h4>
+
+            <p style={{ margin: "4px 0", color: "#555" }}>
+              {selectedPiece.city}
+            </p>
+
+            {/* BOTONES */}
+            <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
+              <button
+                onClick={() => openExternalMaps(selectedPiece)}
+                style={{
+                  padding: "6px 12px",
+                  background: "#2563eb",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: 6,
+                  cursor: "pointer",
+                  fontWeight: 600,
+                }}
+              >
+                Cómo llegar
+              </button>
+
+              {/* Fallback interno */}
+              <button
+                onClick={() => handleDirections(selectedPiece)}
+                style={{
+                  padding: "6px 12px",
+                  background: "#e5e7eb",
+                  color: "#111",
+                  border: "none",
+                  borderRadius: 6,
+                  cursor: "pointer",
+                  fontWeight: 600,
+                }}
+              >
+                Ruta
+              </button>
+            </div>
+          </div>
+        </InfoWindow>
+      )}
+
+      {/* =========================
+         Ruta render
+      ========================= */}
+      {directions && (
+        <DirectionsRenderer directions={directions} />
+      )}
+    </GoogleMap>
   );
 }
-
-/* =========================
-   MEMO
-========================= */
-export default memo(
-  NearbyMap,
-  (prev, next) =>
-    prev.selectedId === next.selectedId &&
-    prev.pieces.length === next.pieces.length
-);

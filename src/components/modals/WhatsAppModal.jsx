@@ -1,3 +1,5 @@
+import { useState } from "react";
+
 export default function WhatsAppModal({ open, onClose, piece }) {
   if (!open || !piece) return null;
 
@@ -19,7 +21,7 @@ Estoy interesado en la siguiente pieza:
 
 ¿Está disponible?`;
 
-  const [message, setMessage] = React.useState(defaultMessage);
+  const [message, setMessage] = useState(defaultMessage);
 
   function sendWhatsApp() {
     const text = encodeURIComponent(message);

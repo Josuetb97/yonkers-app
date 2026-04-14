@@ -1,104 +1,200 @@
 import {
   Home,
   Search,
-  Plus,
+  ShoppingCart,
   MessageSquare,
   Car,
 } from "lucide-react";
 
-export default function BottomNav({ active, onChange }) {
+/**
+ * BottomNav
+ *
+ * Props:
+ *   active   — string: "inicio" | "solicitar" | "carrito" | "mensajes" | "autolote"
+ *   onChange — (tab: string) => void
+ *   hidden   — boolean: oculta el nav con animación (ej. al hacer scroll down)
+ */
+export default function BottomNav({ active, onChange, hidden, cartCount = 0 }) {
   return (
-    <nav style={styles.wrapper}>
-      <Item
-        icon={<Home size={22} />}
+    <nav
+      style={{
+        ...st.wrapper,
+        transform: hidden ? "translateY(110%)" : "translateY(0)",
+      }}
+      role="navigation"
+      aria-label="Navegación principal"
+    >
+
+      <NavItem
+        icon={<Home size={22} strokeWidth={2} />}
         label="Inicio"
-        active={active === "inicio"}
+        isActive={active === "inicio"}
         onClick={() => onChange("inicio")}
       />
 
-      <Item
-        icon={<Search size={22} />}
-        label="Buscar"
-        active={active === "buscar"}
-        onClick={() => onChange("buscar")}
+      <NavItem
+        icon={<Search size={22} strokeWidth={2} />}
+        label="Solicitar"
+        isActive={active === "solicitar"}
+        onClick={() => onChange("solicitar")}
       />
 
-      {/* 🔥 BOTÓN CENTRAL */}
-      <button
-        style={styles.centerButton}
-        onClick={() => onChange("pieza")}
-        aria-label="Agregar pieza"
-        onMouseDown={(e) =>
-          (e.currentTarget.style.transform = "scale(0.94)")
-        }
-        onMouseUp={(e) =>
-          (e.currentTarget.style.transform = "scale(1)")
-        }
-      >
-        <Plus size={28} strokeWidth={3} />
-        <span style={styles.centerText}>Pieza</span>
-      </button>
+      {/* ── Botón central: Carrito ── */}
+      <CenterButton
+        isActive={active === "carrito"}
+        onClick={() => onChange("carrito")}
+        cartCount={cartCount}
+      />
 
-      <Item
-        icon={<MessageSquare size={22} />}
+      <NavItem
+        icon={<MessageSquare size={22} strokeWidth={2} />}
         label="Mensajes"
-        active={active === "mensajes"}
+        isActive={active === "mensajes"}
         onClick={() => onChange("mensajes")}
       />
 
-      <Item
-        icon={<Car size={22} />}
-        label="Mis piezas"
-        active={active === "mis-piezas"}
-        onClick={() => onChange("mis-piezas")}
+      <NavItem
+        icon={<Car size={22} strokeWidth={2} />}
+        label="Autolote"
+        isActive={active === "autolote"}
+        onClick={() => onChange("autolote")}
       />
+
     </nav>
   );
 }
 
-/* =========================
-   ITEM
-========================= */
-function Item({ icon, label, active, onClick }) {
+/* ─────────────────────────────────────
+   NAV ITEM
+───────────────────────────────────── */
+function NavItem({ icon, label, isActive, onClick }) {
   return (
     <button
       onClick={onClick}
+      type="button"
+      aria-label={label}
+      aria-current={isActive ? "page" : undefined}
       style={{
-        ...styles.item,
-        color: active ? "#0b4ea2" : "#6b7280",
-        fontWeight: active ? 700 : 500,
+        ...st.item,
+        color: isActive ? "#1a2d5a" : "#b0b8c9",
       }}
     >
-      <span
+      {/* Indicador superior activo */}
+      <div
         style={{
-          transform: active ? "scale(1.05)" : "scale(1)",
-          transition: "transform .15s ease",
+          ...st.activeBar,
+          opacity:    isActive ? 1 : 0,
+          transform:  isActive ? "scaleX(1)" : "scaleX(0)",
+        }}
+      />
+
+      {/* Ícono */}
+      <div
+        style={{
+          transform:  isActive ? "translateY(-1px) scale(1.08)" : "scale(1)",
+          transition: "transform .2s cubic-bezier(.34,1.56,.64,1)",
         }}
       >
         {icon}
+      </div>
+
+      {/* Label */}
+      <span
+        style={{
+          ...st.label,
+          fontWeight: isActive ? 700 : 500,
+          color:      isActive ? "#1a2d5a" : "#b0b8c9",
+        }}
+      >
+        {label}
       </span>
-      <span style={styles.label}>{label}</span>
     </button>
   );
 }
 
-/* =========================
-   STYLES — MOCKUP REAL
-========================= */
-const styles = {
+/* ─────────────────────────────────────
+   CENTER BUTTON (Carrito)
+───────────────────────────────────── */
+function CenterButton({ isActive, onClick, cartCount = 0 }) {
+  function handleMouseDown(e) {
+    e.currentTarget.style.transform = "translateY(-20px) scale(0.92)";
+  }
+  function handleMouseUp(e) {
+    e.currentTarget.style.transform = "translateY(-22px) scale(1)";
+  }
+  function handleMouseLeave(e) {
+    e.currentTarget.style.transform = "translateY(-22px) scale(1)";
+  }
+
+  return (
+    <button
+      onClick={onClick}
+      onMouseDown={handleMouseDown}
+      onMouseUp={handleMouseUp}
+      onMouseLeave={handleMouseLeave}
+      type="button"
+      aria-label="Carrito de piezas"
+      aria-current={isActive ? "page" : undefined}
+      style={{
+        ...st.centerBtn,
+        boxShadow: isActive
+          ? "0 10px 32px rgba(250,204,21,0.7), 0 2px 8px rgba(0,0,0,0.14)"
+          : "0 8px 24px rgba(250,204,21,0.5), 0 2px 8px rgba(0,0,0,0.12)",
+      }}
+    >
+      <ShoppingCart size={26} strokeWidth={2.4} color="#1a2d5a" />
+
+      {/* Badge de items */}
+      {cartCount > 0 && (
+        <span style={{
+          position: "absolute",
+          top: -2,
+          right: -2,
+          minWidth: 18,
+          height: 18,
+          borderRadius: 9,
+          background: "#1e3a8a",
+          color: "#facc15",
+          fontSize: 9,
+          fontWeight: 800,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "0 4px",
+          border: "2px solid #FFD200",
+          animation: "cartBounce 0.4s ease",
+        }}>
+          {cartCount > 9 ? "9+" : cartCount}
+        </span>
+      )}
+
+      {/* Ring decorativo */}
+      <span style={st.centerRing} />
+    </button>
+  );
+}
+
+/* ─────────────────────────────────────
+   STYLES
+───────────────────────────────────── */
+const st = {
   wrapper: {
     position: "fixed",
     bottom: 0,
     left: 0,
     right: 0,
-    height: 72,
-    paddingBottom: "env(safe-area-inset-bottom)",
+    height: 68,
+    paddingBottom: "env(safe-area-inset-bottom, 0px)",
     background: "#ffffff",
-    borderTop: "1px solid #e5e7eb",
     display: "flex",
     justifyContent: "space-around",
     alignItems: "center",
     zIndex: 9999,
+    borderTopLeftRadius: 22,
+    borderTopRightRadius: 22,
+    boxShadow: "0 -6px 28px rgba(0,0,0,0.09)",
+    transition: "transform .35s cubic-bezier(.4,0,.2,1)",
+    fontFamily: "'Barlow', system-ui, sans-serif",
   },
 
   item: {
@@ -107,41 +203,60 @@ const styles = {
     alignItems: "center",
     background: "none",
     border: "none",
-    gap: 4,
+    gap: 3,
     cursor: "pointer",
-    fontFamily: "Inter, system-ui, -apple-system",
-    fontSize: 11,
-    padding: "6px 10px",
-    transition: "color .15s ease",
+    padding: "4px 10px 6px",
+    position: "relative",
+    transition: "color .2s",
+    WebkitTapHighlightColor: "transparent",
+  },
+
+  /* Barra indicadora en la parte superior del item activo */
+  activeBar: {
+    position: "absolute",
+    top: 0,
+    left: "50%",
+    transform: "translateX(-50%) scaleX(1)",
+    width: 28,
+    height: 3,
+    borderRadius: "0 0 3px 3px",
+    background: "#FFD200",
+    transition: "opacity .2s, transform .25s cubic-bezier(.34,1.56,.64,1)",
+    transformOrigin: "center",
   },
 
   label: {
+    fontSize: 10.5,
     lineHeight: "12px",
+    letterSpacing: "0.01em",
+    transition: "color .2s, font-weight .2s",
+    fontFamily: "'Barlow', system-ui, sans-serif",
   },
 
-  /* 🔥 BOTÓN CENTRAL */
-  centerButton: {
+  /* Botón central */
+  centerBtn: {
     position: "relative",
-    top: -26,
-    width: 64,
-    height: 64,
+    top: -22,
+    width: 62,
+    height: 62,
     borderRadius: "50%",
-    background: "#facc15",
+    background: "#FFD200",
     border: "none",
     display: "flex",
-    flexDirection: "column",
     alignItems: "center",
     justifyContent: "center",
-    boxShadow: "0 12px 28px rgba(0,0,0,.28)",
     cursor: "pointer",
-    color: "#111827",
-    transition: "transform .15s ease",
+    transition: "transform .15s ease, box-shadow .2s",
+    transform: "translateY(-22px) scale(1)",
+    WebkitTapHighlightColor: "transparent",
+    flexShrink: 0,
   },
 
-  centerText: {
-    fontSize: 11,
-    fontWeight: 700,
-    marginTop: -2,
-    fontFamily: "Inter, system-ui",
+  centerRing: {
+    position: "absolute",
+    inset: -5,
+    borderRadius: "50%",
+    border: "2px solid rgba(250,204,21,0.3)",
+    pointerEvents: "none",
   },
 };
