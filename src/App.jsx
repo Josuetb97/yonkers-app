@@ -199,16 +199,15 @@ export default function App() {
   const [cartOpen, setCartOpen] = useState(false);
   const { cartItems, removeFromCart, clearCart } = useCart();
 
-  // En subdominio admin: redirigir a /admin y abrir login si no hay sesión
+  // En subdominio admin: mostrar login si no hay sesión, redirigir a /admin si hay sesión
   useEffect(() => {
-    if (!IS_ADMIN_SUBDOMAIN) return;
-    if (window.location.pathname !== "/admin") {
-      window.location.replace("/admin");
-      return;
-    }
-    // Si ya terminó de cargar y no hay usuario, abrir login
-    if (!loading && !user) {
+    if (!IS_ADMIN_SUBDOMAIN || loading) return;
+    if (!user) {
+      // No está logueado → abrir modal de login sin redirigir
       setLoginOpen(true);
+    } else if (window.location.pathname !== "/admin") {
+      // Está logueado → ir al panel admin
+      window.location.replace("/admin");
     }
   }, [loading, user]);
 
