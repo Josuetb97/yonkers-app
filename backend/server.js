@@ -43,7 +43,7 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
 const pool = new Pool({
   connectionString: DATABASE_URL,
   ssl:
-    process.env.PGSSLMODE === "require"
+    NODE_ENV === "production" || DATABASE_URL.includes("supabase")
       ? { rejectUnauthorized: false }
       : false,
 });
