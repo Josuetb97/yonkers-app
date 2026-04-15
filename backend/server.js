@@ -379,6 +379,22 @@ app.get("/", (_req, res) => {
 });
 
 /* =========================
+   DEBUG TEMPORAL
+========================= */
+app.get("/api/debug-db", async (req, res) => {
+  try {
+    const { rows: cols } = await pool.query(
+      `SELECT column_name FROM information_schema.columns WHERE table_name='pieces' ORDER BY ordinal_position`
+    );
+    const { rows: sample } = await pool.query(`SELECT * FROM pieces LIMIT 3`);
+    const dbHost = pool.options?.connectionString?.replace(/:([^@]+)@/, ":***@") || "unknown";
+    res.json({ host: dbHost, columns: cols.map(r => r.column_name), sample });
+  } catch (err) {
+    res.json({ error: err.message });
+  }
+});
+
+/* =========================
    PIECES — PUBLIC
 ========================= */
 
