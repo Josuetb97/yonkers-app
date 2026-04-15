@@ -420,4 +420,11 @@ const s = {
     cursor: "pointer",
     letterSpacing: "0.02em",
     boxShadow: "0 2px 8px rgba(22,163,74,0.3)",
-    transition: "opacity 0.
+    transition: "opacity 0.15s, transform 0.1s",
+    fontFamily: "inherit",
+  },
+};
+15s, transform 0.1s",
+    fontFamily: "inherit",
+  },
+};
