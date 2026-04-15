@@ -46,7 +46,9 @@ function PieceCard({
   } = piece;
 
   const imgSrc = useMemo(() =>
-    images?.length ? `${BACKEND}${images[0]}` : null,
+    images?.length
+      ? (images[0].startsWith("http") ? images[0] : `${BACKEND}${images[0]}`)
+      : null,
   [images]);
 
   const kmText = useMemo(() =>
@@ -418,7 +420,4 @@ const s = {
     cursor: "pointer",
     letterSpacing: "0.02em",
     boxShadow: "0 2px 8px rgba(22,163,74,0.3)",
-    transition: "opacity 0.15s, transform 0.1s",
-    fontFamily: "inherit",
-  },
-};
+    transition: "opacity 0.
