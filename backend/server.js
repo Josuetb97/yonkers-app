@@ -8,10 +8,7 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const multer = require("multer");
-const fs = require("fs");
-const fsp = require("fs/promises");
 const os = require("os");
-const path = require("path");
 const { Pool } = require("pg");
 const http = require("http");
 const { createClient } = require("@supabase/supabase-js");
@@ -28,7 +25,7 @@ const PORT = Number(process.env.PORT || 3001);
 const FIXED_LAN_IP = process.env.LAN_IP || "";
 const DATABASE_URL = process.env.DATABASE_URL || "";
 const NODE_ENV = process.env.NODE_ENV || "development";
-const UPLOADS_DIR = path.join(__dirname, "uploads");
+const STORAGE_BUCKET = "pieces";
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -104,10 +101,39 @@ function parsePossibleJsonArray(value) {
   }
 }
 
-async function ensureUploadsDir() {
-  if (!fs.existsSync(UPLOADS_DIR)) {
-    await fsp.mkdir(UPLOADS_DIR, { recursive: true });
+/* Crea el bucket público en Supabase si no existe */
+async function ensureBucket() {
+  const { data: buckets } = await supabase.storage.listBuckets();
+  const exists = buckets?.some((b) => b.name === STORAGE_BUCKET);
+  if (!exists) {
+    await supabase.storage.createBucket(STORAGE_BUCKET, { public: true });
+    console.log(`✅ Bucket "${STORAGE_BUCKET}" creado`);
+  } else {
+    console.log(`✅ Bucket "${STORAGE_BUCKET}" listo`);
   }
+}
+
+/* Sube un archivo (buffer) a Supabase Storage y devuelve la URL pública */
+async function uploadToSupabase(file) {
+  const cleanName = String(file.originalname || "file")
+    .replace(/\s+/g, "_")
+    .replace(/[^\w.-]/g, "");
+  const filename = `${Date.now()}-${cleanName}`;
+
+  const { data, error } = await supabase.storage
+    .from(STORAGE_BUCKET)
+    .upload(filename, file.buffer, {
+      contentType: file.mimetype || "image/jpeg",
+      upsert: false,
+    });
+
+  if (error) throw new Error(`Supabase Storage: ${error.message}`);
+
+  const { data: urlData } = supabase.storage
+    .from(STORAGE_BUCKET)
+    .getPublicUrl(data.path);
+
+  return urlData.publicUrl;
 }
 
 function normalizeImages(value) {
@@ -117,17 +143,15 @@ function normalizeImages(value) {
 
 async function deleteUploadedFiles(images = []) {
   const arr = normalizeImages(images);
-
   for (const img of arr) {
     try {
-      const file = img.replace(/^\/uploads\//, "");
-      const abs = path.join(UPLOADS_DIR, file);
-
-      if (fs.existsSync(abs)) {
-        await fsp.unlink(abs);
+      // Extraer solo el nombre del archivo de la URL pública
+      const filename = img.split("/").pop();
+      if (filename) {
+        await supabase.storage.from(STORAGE_BUCKET).remove([filename]);
       }
     } catch (_err) {
-      // ignore individual file deletion errors
+      // ignorar errores individuales
     }
   }
 }
@@ -308,33 +332,21 @@ async function initDB() {
    MULTER
 ========================= */
 
-const storage = multer.diskStorage({
-  destination: async (_req, _file, cb) => {
-    try {
-      await ensureUploadsDir();
-      cb(null, UPLOADS_DIR);
-    } catch (err) {
-      cb(err);
-    }
-  },
-
-  filename: (_req, file, cb) => {
-    const cleanName = String(file.originalname || "file")
-      .replace(/\s+/g, "_")
-      .replace(/[^\w.-]/g, "");
-
-    cb(null, `${Date.now()}-${cleanName}`);
-  },
+/* Multer en memoria — los archivos se suben a Supabase Storage */
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 15 * 1024 * 1024 }, // 15 MB por imagen
 });
 
-const upload = multer({ storage });
-
-function collectUploadedImages(req) {
+async function collectUploadedImages(req) {
   const files = Array.isArray(req.files) ? req.files : [];
-
-  return files
-    .filter((f) => f.fieldname === "images")
-    .map((f) => `/uploads/${f.filename}`);
+  const imageFiles = files.filter((f) => f.fieldname === "images");
+  const urls = [];
+  for (const file of imageFiles) {
+    const url = await uploadToSupabase(file);
+    urls.push(url);
+  }
+  return urls;
 }
 
 /* =========================
@@ -344,7 +356,6 @@ function collectUploadedImages(req) {
 app.use(cors({ origin: true, credentials: true }));
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
-app.use("/uploads", express.static(UPLOADS_DIR));
 
 app.use((req, res, next) => {
   const start = Date.now();
@@ -463,7 +474,7 @@ app.get("/api/my/pieces", auth, async (req, res) => {
 });
 
 app.post("/api/pieces", auth, upload.any(), async (req, res) => {
-  const images = collectUploadedImages(req);
+  const images = await collectUploadedImages(req);
   const b = req.body;
 
   const title = safeText(b.title);
@@ -603,7 +614,7 @@ app.get("/api/my/vehicles", auth, async (req, res) => {
 });
 
 app.post("/api/vehicles", auth, upload.any(), async (req, res) => {
-  const images = collectUploadedImages(req);
+  const images = await collectUploadedImages(req);
   const b = req.body;
 
   const title = safeText(b.title);
@@ -710,7 +721,7 @@ app.get("/api/requests", async (_req, res) => {
 });
 
 app.post("/api/requests", upload.any(), async (req, res) => {
-  const images = collectUploadedImages(req);
+  const images = await collectUploadedImages(req);
   const b = req.body;
 
   const title    = safeText(b.title);
@@ -1277,7 +1288,7 @@ app.use((err, _req, res, _next) => {
 
 async function start() {
   try {
-    await ensureUploadsDir();
+    await ensureBucket();
     await initDB();
 
     server.listen(PORT, "0.0.0.0", () => {
