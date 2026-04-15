@@ -424,7 +424,3 @@ const s = {
     fontFamily: "inherit",
   },
 };
-15s, transform 0.1s",
-    fontFamily: "inherit",
-  },
-};
