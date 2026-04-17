@@ -43,6 +43,15 @@ export default function LoginModal({ onClose, onSuccess }) {
     });
   }
 
+  async function loginFacebook() {
+    await supabase.auth.signInWithOAuth({
+      provider: "facebook",
+      options: {
+        redirectTo: window.location.origin,
+      },
+    });
+  }
+
   return (
     <div style={s.overlay} onClick={onClose}>
       <div style={s.card} onClick={(e) => e.stopPropagation()}>
@@ -65,6 +74,10 @@ export default function LoginModal({ onClose, onSuccess }) {
 
             <button type="button" onClick={loginGoogle} style={s.google}>
               Continuar con Google
+            </button>
+
+            <button type="button" onClick={loginFacebook} style={s.facebook}>
+              Continuar con Facebook
             </button>
           </form>
         ) : (
@@ -116,6 +129,16 @@ const s = {
     border: "none",
     padding: 12,
     borderRadius: 12,
+    cursor: "pointer",
+  },
+  facebook: {
+    background: "#1877F2",
+    color: "#fff",
+    border: "none",
+    padding: 12,
+    borderRadius: 12,
+    cursor: "pointer",
+    fontWeight: 600,
   },
   close: {
     marginTop: 10,

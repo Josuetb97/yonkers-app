@@ -565,6 +565,13 @@ export default function Admin() {
   const [msg,       setMsg]       = useState({ text: "", type: "" });
   const [search,    setSearch]    = useState("");
   const [editingId, setEditingId] = useState(null);
+  const [isMobile,  setIsMobile]  = useState(window.innerWidth < 640);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 640);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   // Ref to track object URLs for cleanup
   const objectUrlsRef = useRef([]);
@@ -816,57 +823,74 @@ export default function Admin() {
 
           <form onSubmit={handleSubmit} style={st.form}>
 
-            {/* ── Layout 2 columnas ── */}
-            <div style={st.formGrid}>
-
-              {/* Columna izquierda: Información */}
-              <div style={st.formSection}>
-                <div style={st.formSectionLabel}>Información de la pieza</div>
-                <div style={st.grid}>
-                  {PIECE_FIELDS.map((field) => (
-                    <Field
-                      key={field.name}
-                      field={field}
-                      value={form[field.name]}
-                      onChange={handleChange}
-                    />
-                  ))}
+            {/* ── PASO 1: Información ── */}
+            <div style={st.stepSection}>
+              <div style={st.stepHeader}>
+                <div style={st.stepBadge}>1</div>
+                <div>
+                  <div style={st.stepTitle}>Información de la pieza</div>
+                  <div style={st.stepSub}>Datos básicos que ven los compradores</div>
                 </div>
               </div>
-
-              {/* Columna derecha: Ubicación + Redes sociales */}
-              <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-
-                <div style={st.formSection}>
-                  <div style={st.formSectionLabel}>Ubicación</div>
-                  <LocationPicker
-                    lat={form.lat}
-                    lng={form.lng}
-                    city={form.city}
-                    onLocation={handleLocation}
+              <div style={{ ...st.grid, gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr" }}>
+                {PIECE_FIELDS.map((field) => (
+                  <Field
+                    key={field.name}
+                    field={field}
+                    value={form[field.name]}
+                    onChange={handleChange}
                   />
-                </div>
-
-                <div style={st.formSection}>
-                  <div style={st.formSectionLabel}>Redes sociales del yonker</div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                    {SOCIAL_FIELDS.map((field) => (
-                      <SocialField
-                        key={field.name}
-                        field={field}
-                        value={form[field.name]}
-                        onChange={handleChange}
-                      />
-                    ))}
-                  </div>
-                </div>
-
+                ))}
               </div>
             </div>
 
-            {/* Imágenes — ancho completo */}
-            <div style={st.formSection}>
-              <div style={st.formSectionLabel}>Fotos de la pieza</div>
+            {/* ── PASO 2: Ubicación ── */}
+            <div style={st.stepSection}>
+              <div style={st.stepHeader}>
+                <div style={st.stepBadge}>2</div>
+                <div>
+                  <div style={st.stepTitle}>Ubicación</div>
+                  <div style={st.stepSub}>¿Dónde está el yonker?</div>
+                </div>
+              </div>
+              <LocationPicker
+                lat={form.lat}
+                lng={form.lng}
+                city={form.city}
+                onLocation={handleLocation}
+              />
+            </div>
+
+            {/* ── PASO 3: Redes sociales ── */}
+            <div style={st.stepSection}>
+              <div style={st.stepHeader}>
+                <div style={st.stepBadge}>3</div>
+                <div>
+                  <div style={st.stepTitle}>Redes sociales</div>
+                  <div style={st.stepSub}>Opcional — para que los compradores te sigan</div>
+                </div>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {SOCIAL_FIELDS.map((field) => (
+                  <SocialField
+                    key={field.name}
+                    field={field}
+                    value={form[field.name]}
+                    onChange={handleChange}
+                  />
+                ))}
+              </div>
+            </div>
+
+            {/* ── PASO 4: Fotos ── */}
+            <div style={st.stepSection}>
+              <div style={st.stepHeader}>
+                <div style={st.stepBadge}>4</div>
+                <div>
+                  <div style={st.stepTitle}>Fotos de la pieza</div>
+                  <div style={st.stepSub}>Las fotos aumentan las ventas</div>
+                </div>
+              </div>
               <ImageUploader
                 files={files}
                 preview={preview}
@@ -1224,11 +1248,16 @@ const st = {
   kpiNum:          { fontSize: 26, fontWeight: 800, color: "#1e3a8a", lineHeight: 1 },
   kpiLabel:        { fontSize: 10, fontWeight: 600, color: "#94a3b8", marginTop: 4, letterSpacing: "0.05em", textTransform: "uppercase" },
   card:            { background: "#fff", borderRadius: 18, padding: "clamp(18px,3.5vw,28px)", boxShadow: "0 2px 12px rgba(0,0,0,0.06),0 1px 3px rgba(0,0,0,0.04)", border: "1px solid #e8edf5" },
-  form:            { display: "flex", flexDirection: "column", gap: 20 },
+  form:            { display: "flex", flexDirection: "column", gap: 4 },
   formGrid:        { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 18, alignItems: "start" },
   formSection:     { display: "flex", flexDirection: "column", gap: 10 },
   formSectionLabel:{ fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "#94a3b8", paddingBottom: 6, borderBottom: "1px solid #f1f5f9" },
   grid:            { display: "grid", gridTemplateColumns: "1fr", gap: 10 },
+  stepSection:     { display: "flex", flexDirection: "column", gap: 14, padding: "18px 0", borderBottom: "1px solid #f1f5f9" },
+  stepHeader:      { display: "flex", alignItems: "center", gap: 12 },
+  stepBadge:       { width: 28, height: 28, borderRadius: "50%", background: "linear-gradient(135deg,#1e3a8a,#2563eb)", color: "#fff", fontSize: 13, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 },
+  stepTitle:       { fontSize: 14, fontWeight: 700, color: "#0f172a" },
+  stepSub:         { fontSize: 11, color: "#94a3b8", marginTop: 1 },
   gridSocial:      { display: "grid", gridTemplateColumns: "1fr", gap: 10 },
   formActions:     { display: "flex", gap: 8, justifyContent: "flex-end", paddingTop: 4 },
   cancelBtn:       { padding: "10px 20px", borderRadius: 9, border: "1.5px solid #e2e8f0", background: "#fff", fontSize: 13, fontWeight: 600, color: "#475569", cursor: "pointer" },
