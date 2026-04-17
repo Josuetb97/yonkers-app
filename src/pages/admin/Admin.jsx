@@ -345,29 +345,6 @@ function LocationPicker({ lat, lng, city, onLocation }) {
           {errorMsg}
         </div>
       )}
-
-      <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
-        <div style={{ flex: 1, ...sc.fieldWrap, gap: 3 }}>
-          <label style={{ ...sc.label, fontSize: 11, color: "#9ca3af" }}>Latitud (manual)</label>
-          <input
-            name="lat"
-            value={lat}
-            onChange={(e) => onLocation(e.target.value, lng)}
-            placeholder="15.5003"
-            style={{ ...sc.input, height: 36, fontSize: 12, color: "#6b7280" }}
-          />
-        </div>
-        <div style={{ flex: 1, ...sc.fieldWrap, gap: 3 }}>
-          <label style={{ ...sc.label, fontSize: 11, color: "#9ca3af" }}>Longitud (manual)</label>
-          <input
-            name="lng"
-            value={lng}
-            onChange={(e) => onLocation(lat, e.target.value)}
-            placeholder="-88.0256"
-            style={{ ...sc.input, height: 36, fontSize: 12, color: "#6b7280" }}
-          />
-        </div>
-      </div>
     </div>
   );
 }
