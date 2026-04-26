@@ -278,8 +278,13 @@ export default function RequestNeed() {
 
     setSaving(true);
 
+    // Abrir ventana de WhatsApp AHORA (dentro del gesto del usuario)
+    // para evitar que el bloqueador de popups la rechace después del await
+    const phone = form.whatsapp.trim().replace(/\D/g, "");
+    const waWindow = phone ? window.open("about:blank", "_blank") : null;
+
     try {
-      // 1. Subir imágenes a Supabase Storage
+      // 1. Comprimir y subir imágenes a Supabase Storage
       const compressed = await compressImages(files);
       const imageUrls = [];
 
@@ -315,13 +320,13 @@ export default function RequestNeed() {
 
       if (insertError) throw insertError;
 
-      // 3. Recargar lista y compartir por WhatsApp
+      // 3. Recargar lista
       await loadRequests();
 
-      const phone  = (inserted.whatsapp || "").replace(/\D/g, "");
+      // 4. Construir mensaje y abrir WhatsApp
       const msgTxt = `Busco: ${inserted.title}${inserted.brand ? ` (${inserted.brand})` : ""}${inserted.city ? ` — ${inserted.city}` : ""}${inserted.description ? `\n${inserted.description}` : ""}\n\nPublicado en Yonkers App 🔧`;
 
-      // Intentar Web Share API con fotos (funciona en móvil)
+      // Intentar Web Share API con fotos (solo en móvil con soporte)
       let shared = false;
       if (compressed.length > 0 && typeof navigator.canShare === "function") {
         try {
@@ -329,21 +334,18 @@ export default function RequestNeed() {
             new File([f], f.name || `foto_${i + 1}.jpg`, { type: f.type || "image/jpeg" })
           );
           if (navigator.canShare({ files: shareFiles })) {
+            if (waWindow) { waWindow.close(); }
             await navigator.share({ files: shareFiles, text: msgTxt });
             shared = true;
           }
         } catch (_) {
-          // usuario canceló o navegador no lo soporta — fallback abajo
+          // usuario canceló o no soportado — usar ventana pre-abierta
         }
       }
 
-      // Fallback: abrir WhatsApp con texto
-      if (!shared && phone) {
-        window.open(
-          `https://wa.me/${phone}?text=${encodeURIComponent(msgTxt)}`,
-          "_blank",
-          "noopener,noreferrer"
-        );
+      // Redirigir la ventana pre-abierta a WhatsApp
+      if (!shared && waWindow && !waWindow.closed) {
+        waWindow.location.href = `https://wa.me/${phone}?text=${encodeURIComponent(msgTxt)}`;
       }
 
       setFiles([]);
@@ -357,6 +359,7 @@ export default function RequestNeed() {
       setTimeout(() => setSent(false), 5000);
     } catch (err) {
       console.error(err);
+      if (waWindow && !waWindow.closed) waWindow.close();
       alert("Error enviando solicitud. Inténtalo de nuevo.");
     } finally {
       setSaving(false);
