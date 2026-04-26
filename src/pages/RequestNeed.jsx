@@ -278,11 +278,6 @@ export default function RequestNeed() {
 
     setSaving(true);
 
-    // Abrir ventana de WhatsApp AHORA (dentro del gesto del usuario)
-    // para evitar que el bloqueador de popups la rechace después del await
-    const phone = form.whatsapp.trim().replace(/\D/g, "");
-    const waWindow = phone ? window.open("about:blank", "_blank") : null;
-
     try {
       // 1. Comprimir y subir imágenes a Supabase Storage
       const compressed = await compressImages(files);
@@ -323,29 +318,16 @@ export default function RequestNeed() {
       // 3. Recargar lista
       await loadRequests();
 
-      // 4. Construir mensaje y abrir WhatsApp
-      const msgTxt = `Busco: ${inserted.title}${inserted.brand ? ` (${inserted.brand})` : ""}${inserted.city ? ` — ${inserted.city}` : ""}${inserted.description ? `\n${inserted.description}` : ""}\n\nPublicado en Yonkers App 🔧`;
-
-      // Intentar Web Share API con fotos (solo en móvil con soporte)
-      let shared = false;
-      if (compressed.length > 0 && typeof navigator.canShare === "function") {
-        try {
-          const shareFiles = compressed.map((f, i) =>
-            new File([f], f.name || `foto_${i + 1}.jpg`, { type: f.type || "image/jpeg" })
-          );
-          if (navigator.canShare({ files: shareFiles })) {
-            if (waWindow) { waWindow.close(); }
-            await navigator.share({ files: shareFiles, text: msgTxt });
-            shared = true;
-          }
-        } catch (_) {
-          // usuario canceló o no soportado — usar ventana pre-abierta
-        }
-      }
-
-      // Redirigir la ventana pre-abierta a WhatsApp
-      if (!shared && waWindow && !waWindow.closed) {
-        waWindow.location.href = `https://wa.me/${phone}?text=${encodeURIComponent(msgTxt)}`;
+      // 4. Abrir WhatsApp con mensaje + links de fotos
+      const phone = (inserted.whatsapp || "").replace(/\D/g, "");
+      if (phone) {
+        let msg = `Busco: ${inserted.title}`;
+        if (inserted.brand) msg += ` (${inserted.brand})`;
+        if (inserted.city)  msg += ` — ${inserted.city}`;
+        if (inserted.description) msg += `\n${inserted.description}`;
+        if (imageUrls.length > 0) msg += `\n\n📷 Fotos:\n${imageUrls.join("\n")}`;
+        msg += `\n\nPublicado en Yonkers App 🔧`;
+        window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, "_blank", "noopener,noreferrer");
       }
 
       setFiles([]);
@@ -359,7 +341,6 @@ export default function RequestNeed() {
       setTimeout(() => setSent(false), 5000);
     } catch (err) {
       console.error(err);
-      if (waWindow && !waWindow.closed) waWindow.close();
       alert("Error enviando solicitud. Inténtalo de nuevo.");
     } finally {
       setSaving(false);
