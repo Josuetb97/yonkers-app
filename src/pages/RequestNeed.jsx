@@ -144,6 +144,7 @@ export default function RequestNeed() {
   const [form,         setForm]         = useState(EMPTY);
   const [files,        setFiles]        = useState([]);
   const [preview,      setPreview]      = useState([]);
+  const [compressed,   setCompressed]   = useState([]); // pre-comprimidas al seleccionar
   const [saving,       setSaving]       = useState(false);
   const [requests,     setRequests]     = useState([]);
   const [sent,         setSent]         = useState(false);
@@ -196,12 +197,17 @@ export default function RequestNeed() {
     setFiles((prev) => [...prev, ...arr]);
     setPreview((prev) => [...prev, ...arr.map((f) => URL.createObjectURL(f))]);
     e.target.value = "";
+    // Pre-comprimir para Web Share API (así están listas al momento de enviar)
+    compressImages(arr).then((comp) => {
+      setCompressed((prev) => [...prev, ...comp]);
+    });
   }
 
   function removePhoto(i) {
     URL.revokeObjectURL(preview[i]);
-    setFiles((prev)   => prev.filter((_, idx) => idx !== i));
-    setPreview((prev) => prev.filter((_, idx) => idx !== i));
+    setFiles((prev)      => prev.filter((_, idx) => idx !== i));
+    setPreview((prev)    => prev.filter((_, idx) => idx !== i));
+    setCompressed((prev) => prev.filter((_, idx) => idx !== i));
   }
 
   /* ── FEATURE #1: Analizar texto con IA ── */
@@ -278,12 +284,24 @@ export default function RequestNeed() {
 
     setSaving(true);
 
+    // Intentar Web Share API con fotos pre-comprimidas (inmediato, dentro del gesto)
+    const msgPreview = `Busco: ${form.title.trim()}${form.brand?.trim() ? ` (${form.brand.trim()})` : ""}${form.city?.trim() ? ` — ${form.city.trim()}` : ""}\n\nPublicado en Yonkers App 🔧`;
+    if (compressed.length > 0 && typeof navigator.canShare === "function") {
+      try {
+        const shareFiles = compressed.map((f, i) =>
+          new File([f], f.name || `foto_${i + 1}.jpg`, { type: f.type || "image/jpeg" })
+        );
+        if (navigator.canShare({ files: shareFiles })) {
+          navigator.share({ files: shareFiles, text: msgPreview }).catch(() => {});
+        }
+      } catch (_) {}
+    }
+
     try {
-      // 1. Comprimir y subir imágenes a Supabase Storage
-      const compressed = await compressImages(files);
+      // 1. Subir imágenes ya comprimidas a Supabase Storage
       const imageUrls = [];
 
-      for (const file of compressed) {
+      for (const file of compressed.length > 0 ? compressed : await compressImages(files)) {
         const ext = file.name?.split(".").pop() || "jpg";
         const filename = `requests/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
         const { error: uploadError } = await supabase.storage
@@ -332,6 +350,7 @@ export default function RequestNeed() {
 
       setFiles([]);
       setPreview([]);
+      setCompressed([]);
       setForm(EMPTY);
       setAiText("");
       setAiFilled(false);
