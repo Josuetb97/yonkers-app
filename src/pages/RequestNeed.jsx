@@ -315,15 +315,35 @@ export default function RequestNeed() {
 
       if (insertError) throw insertError;
 
-      // 3. Recargar lista y abrir WhatsApp
+      // 3. Recargar lista y compartir por WhatsApp
       await loadRequests();
 
-      const phone = (inserted.whatsapp || "").replace(/\D/g, "");
-      if (phone) {
-        const msg = encodeURIComponent(
-          `Hola, publiqué una solicitud en Yonkers App buscando: ${inserted.title}${inserted.brand ? ` (${inserted.brand})` : ""}. ¿Tienes disponible?`
+      const phone  = (inserted.whatsapp || "").replace(/\D/g, "");
+      const msgTxt = `Busco: ${inserted.title}${inserted.brand ? ` (${inserted.brand})` : ""}${inserted.city ? ` — ${inserted.city}` : ""}${inserted.description ? `\n${inserted.description}` : ""}\n\nPublicado en Yonkers App 🔧`;
+
+      // Intentar Web Share API con fotos (funciona en móvil)
+      let shared = false;
+      if (compressed.length > 0 && typeof navigator.canShare === "function") {
+        try {
+          const shareFiles = compressed.map((f, i) =>
+            new File([f], f.name || `foto_${i + 1}.jpg`, { type: f.type || "image/jpeg" })
+          );
+          if (navigator.canShare({ files: shareFiles })) {
+            await navigator.share({ files: shareFiles, text: msgTxt });
+            shared = true;
+          }
+        } catch (_) {
+          // usuario canceló o navegador no lo soporta — fallback abajo
+        }
+      }
+
+      // Fallback: abrir WhatsApp con texto
+      if (!shared && phone) {
+        window.open(
+          `https://wa.me/${phone}?text=${encodeURIComponent(msgTxt)}`,
+          "_blank",
+          "noopener,noreferrer"
         );
-        window.open(`https://wa.me/${phone}?text=${msg}`, "_blank", "noopener,noreferrer");
       }
 
       setFiles([]);
