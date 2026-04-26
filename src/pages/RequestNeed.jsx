@@ -148,6 +148,7 @@ export default function RequestNeed() {
   const [saving,       setSaving]       = useState(false);
   const [requests,     setRequests]     = useState([]);
   const [sent,         setSent]         = useState(false);
+  const [sentData,     setSentData]     = useState(null); // { title, brand, city, imageUrls, shareFiles }
 
   // Feature #1 — AI autocomplete
   const [aiText,       setAiText]       = useState("");
@@ -284,22 +285,6 @@ export default function RequestNeed() {
 
     setSaving(true);
 
-    // ¿El dispositivo soporta compartir archivos?
-    const msgPreview = `Busco: ${form.title.trim()}${form.brand?.trim() ? ` (${form.brand.trim()})` : ""}${form.city?.trim() ? ` — ${form.city.trim()}` : ""}\n\nPublicado en Yonkers App 🔧`;
-    let usedShareApi = false;
-    if (compressed.length > 0 && typeof navigator.canShare === "function") {
-      try {
-        const shareFiles = compressed.map((f, i) =>
-          new File([f], f.name || `foto_${i + 1}.jpg`, { type: f.type || "image/jpeg" })
-        );
-        if (navigator.canShare({ files: shareFiles })) {
-          // Lanzar share y NO abrir WhatsApp por URL después
-          navigator.share({ files: shareFiles, text: msgPreview }).catch(() => {});
-          usedShareApi = true;
-        }
-      } catch (_) {}
-    }
-
     try {
       // 1. Subir imágenes a Supabase Storage
       const imageUrls = [];
@@ -340,19 +325,18 @@ export default function RequestNeed() {
       // 3. Recargar lista
       await loadRequests();
 
-      // 4. Solo abrir WhatsApp por URL si NO se usó Web Share API
-      if (!usedShareApi) {
-        const phone = (inserted.whatsapp || "").replace(/\D/g, "");
-        if (phone) {
-          let msg = `Busco: ${inserted.title}`;
-          if (inserted.brand)       msg += ` (${inserted.brand})`;
-          if (inserted.city)        msg += ` — ${inserted.city}`;
-          if (inserted.description) msg += `\n${inserted.description}`;
-          if (imageUrls.length > 0) msg += `\n\n📷 Fotos:\n${imageUrls.join("\n")}`;
-          msg += `\n\nPublicado en Yonkers App 🔧`;
-          window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, "_blank", "noopener,noreferrer");
-        }
-      }
+      // 4. Guardar datos para compartir desde el botón (gesto del usuario)
+      const shareFiles = (compressed.length > 0 ? compressed : filesToUpload).filter(
+        (f) => f instanceof File
+      );
+      setSentData({
+        title:     inserted.title,
+        brand:     inserted.brand,
+        city:      inserted.city,
+        description: inserted.description,
+        imageUrls,
+        shareFiles,
+      });
 
       setFiles([]);
       setPreview([]);
@@ -363,13 +347,56 @@ export default function RequestNeed() {
       setMatches([]);
       setMatchDone(false);
       setSent(true);
-      setTimeout(() => setSent(false), 5000);
     } catch (err) {
       console.error(err);
       alert("Error enviando solicitud. Inténtalo de nuevo.");
     } finally {
       setSaving(false);
     }
+  }
+
+  // Compartir en WhatsApp — llamado DIRECTAMENTE desde un click (gesto del usuario)
+  async function handleShare() {
+    if (!sentData) return;
+
+    const { title, brand, city, description, imageUrls, shareFiles } = sentData;
+
+    let text = `🔍 Busco: *${title}*`;
+    if (brand)       text += ` (${brand})`;
+    if (city)        text += ` — ${city}`;
+    if (description) text += `\n${description}`;
+    text += `\n\nPublicado en Yonkers App 🔧\nhttps://yonkersapp.com/request`;
+
+    // Intentar Web Share API con archivos (solo si está soportado)
+    const canShareFiles = navigator.canShare && shareFiles.length > 0 &&
+      navigator.canShare({ files: shareFiles });
+
+    if (canShareFiles) {
+      try {
+        await navigator.share({ title: `Busco: ${title}`, text, files: shareFiles });
+        return;
+      } catch (err) {
+        if (err.name !== "AbortError") {
+          // Falló compartir archivos — caer al link de texto
+        } else {
+          return; // Usuario canceló
+        }
+      }
+    }
+
+    // Fallback: Web Share sin archivos (solo texto)
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: `Busco: ${title}`, text });
+        return;
+      } catch (err) {
+        if (err.name === "AbortError") return;
+      }
+    }
+
+    // Último fallback: abrir wa.me con URLs de imágenes en texto
+    if (imageUrls.length > 0) text += `\n\n📷 Fotos:\n${imageUrls.join("\n")}`;
+    window.location.href = `https://wa.me/?text=${encodeURIComponent(text)}`;
   }
 
   const charLeft = 300 - (form.description?.length || 0);
@@ -399,13 +426,66 @@ export default function RequestNeed() {
           <div style={st.heroBadge}>IA ✨</div>
         </div>
 
-        {/* ══ SUCCESS BANNER ══ */}
-        {sent && (
-          <div style={st.successBanner}>
-            <span style={{ fontSize: 20 }}>🎉</span>
-            <div>
-              <div style={{ fontWeight: 700, fontSize: 14 }}>¡Solicitud publicada!</div>
-              <div style={{ fontSize: 12, marginTop: 2, opacity: 0.85 }}>Los yonkers cercanos te escribirán pronto al WhatsApp</div>
+        {/* ══ SUCCESS MODAL ══ */}
+        {sent && sentData && (
+          <div style={{
+            position: "fixed", inset: 0, zIndex: 999,
+            background: "rgba(0,0,0,0.55)", backdropFilter: "blur(4px)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            padding: "20px",
+          }}>
+            <div style={{
+              background: "#fff", borderRadius: 20, padding: "28px 24px",
+              maxWidth: 360, width: "100%", textAlign: "center",
+              boxShadow: "0 20px 60px rgba(0,0,0,0.25)",
+            }}>
+              {/* Icono animado */}
+              <div style={{ fontSize: 52, marginBottom: 12 }}>🎉</div>
+              <div style={{ fontSize: 18, fontWeight: 800, color: "#111827", marginBottom: 6 }}>
+                ¡Solicitud publicada!
+              </div>
+              <div style={{ fontSize: 13, color: "#6b7280", marginBottom: 24, lineHeight: 1.5 }}>
+                Los yonkers cercanos te escribirán pronto. Comparte tu solicitud en WhatsApp para llegar a más personas.
+              </div>
+
+              {/* Fotos preview */}
+              {sentData.imageUrls.length > 0 && (
+                <div style={{ display: "flex", gap: 8, justifyContent: "center", marginBottom: 20, flexWrap: "wrap" }}>
+                  {sentData.imageUrls.slice(0, 4).map((url, i) => (
+                    <img key={i} src={url} alt="" style={{
+                      width: 60, height: 60, borderRadius: 10,
+                      objectFit: "cover", border: "2px solid #e5e7eb",
+                    }} />
+                  ))}
+                </div>
+              )}
+
+              {/* Botón principal: Compartir en WhatsApp */}
+              <button
+                onClick={handleShare}
+                style={{
+                  width: "100%", padding: "14px", borderRadius: 12,
+                  background: "#25D366", color: "#fff", border: "none",
+                  fontSize: 15, fontWeight: 700, cursor: "pointer",
+                  display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                  marginBottom: 10,
+                }}
+              >
+                <span style={{ fontSize: 20 }}>📤</span>
+                Compartir en WhatsApp
+              </button>
+
+              {/* Botón secundario: Cerrar */}
+              <button
+                onClick={() => { setSent(false); setSentData(null); }}
+                style={{
+                  width: "100%", padding: "11px", borderRadius: 12,
+                  background: "#f3f4f6", color: "#374151", border: "none",
+                  fontSize: 14, fontWeight: 600, cursor: "pointer",
+                }}
+              >
+                Cerrar
+              </button>
             </div>
           </div>
         )}
