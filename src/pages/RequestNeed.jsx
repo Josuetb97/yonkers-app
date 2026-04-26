@@ -284,24 +284,28 @@ export default function RequestNeed() {
 
     setSaving(true);
 
-    // Intentar Web Share API con fotos pre-comprimidas (inmediato, dentro del gesto)
+    // ¿El dispositivo soporta compartir archivos?
     const msgPreview = `Busco: ${form.title.trim()}${form.brand?.trim() ? ` (${form.brand.trim()})` : ""}${form.city?.trim() ? ` — ${form.city.trim()}` : ""}\n\nPublicado en Yonkers App 🔧`;
+    let usedShareApi = false;
     if (compressed.length > 0 && typeof navigator.canShare === "function") {
       try {
         const shareFiles = compressed.map((f, i) =>
           new File([f], f.name || `foto_${i + 1}.jpg`, { type: f.type || "image/jpeg" })
         );
         if (navigator.canShare({ files: shareFiles })) {
+          // Lanzar share y NO abrir WhatsApp por URL después
           navigator.share({ files: shareFiles, text: msgPreview }).catch(() => {});
+          usedShareApi = true;
         }
       } catch (_) {}
     }
 
     try {
-      // 1. Subir imágenes ya comprimidas a Supabase Storage
+      // 1. Subir imágenes a Supabase Storage
       const imageUrls = [];
+      const filesToUpload = compressed.length > 0 ? compressed : await compressImages(files);
 
-      for (const file of compressed.length > 0 ? compressed : await compressImages(files)) {
+      for (const file of filesToUpload) {
         const ext = file.name?.split(".").pop() || "jpg";
         const filename = `requests/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
         const { error: uploadError } = await supabase.storage
@@ -336,16 +340,18 @@ export default function RequestNeed() {
       // 3. Recargar lista
       await loadRequests();
 
-      // 4. Abrir WhatsApp con mensaje + links de fotos
-      const phone = (inserted.whatsapp || "").replace(/\D/g, "");
-      if (phone) {
-        let msg = `Busco: ${inserted.title}`;
-        if (inserted.brand) msg += ` (${inserted.brand})`;
-        if (inserted.city)  msg += ` — ${inserted.city}`;
-        if (inserted.description) msg += `\n${inserted.description}`;
-        if (imageUrls.length > 0) msg += `\n\n📷 Fotos:\n${imageUrls.join("\n")}`;
-        msg += `\n\nPublicado en Yonkers App 🔧`;
-        window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, "_blank", "noopener,noreferrer");
+      // 4. Solo abrir WhatsApp por URL si NO se usó Web Share API
+      if (!usedShareApi) {
+        const phone = (inserted.whatsapp || "").replace(/\D/g, "");
+        if (phone) {
+          let msg = `Busco: ${inserted.title}`;
+          if (inserted.brand)       msg += ` (${inserted.brand})`;
+          if (inserted.city)        msg += ` — ${inserted.city}`;
+          if (inserted.description) msg += `\n${inserted.description}`;
+          if (imageUrls.length > 0) msg += `\n\n📷 Fotos:\n${imageUrls.join("\n")}`;
+          msg += `\n\nPublicado en Yonkers App 🔧`;
+          window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, "_blank", "noopener,noreferrer");
+        }
       }
 
       setFiles([]);
