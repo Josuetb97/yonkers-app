@@ -1,5 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { compressImages } from "../lib/compressImage";
+import { supabase } from "../lib/supabase";
 
 const API   = "/api";
 const BLUE  = "#1e3a8a";
@@ -167,7 +169,12 @@ export default function RequestNeed() {
 
   async function loadRequests() {
     try {
-      const data = await fetch(`${API}/requests`).then((r) => r.json());
+      const { data, error } = await supabase
+        .from("requests")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(100);
+      if (error) throw error;
       setRequests(Array.isArray(data) ? data : []);
     } catch {
       setRequests([]);
@@ -271,18 +278,52 @@ export default function RequestNeed() {
 
     setSaving(true);
 
-    const fd = new FormData();
-    Object.entries(form).forEach(([k, v]) => fd.append(k, v));
-    files.forEach((f) => fd.append("images", f));
-
     try {
-      const res  = await fetch(`${API}/requests`, { method: "POST", body: fd });
-      const data = await res.json();
+      // 1. Subir imágenes a Supabase Storage
+      const compressed = await compressImages(files);
+      const imageUrls = [];
 
+      for (const file of compressed) {
+        const ext = file.name?.split(".").pop() || "jpg";
+        const filename = `requests/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+        const { error: uploadError } = await supabase.storage
+          .from("pieces")
+          .upload(filename, file, { contentType: file.type, upsert: false });
+
+        if (!uploadError) {
+          const { data: urlData } = supabase.storage
+            .from("pieces")
+            .getPublicUrl(filename);
+          if (urlData?.publicUrl) imageUrls.push(urlData.publicUrl);
+        }
+      }
+
+      // 2. Insertar en la tabla requests
+      const { data: inserted, error: insertError } = await supabase
+        .from("requests")
+        .insert([{
+          title:       form.title.trim(),
+          brand:       form.brand?.trim() || "",
+          years:       form.years?.trim() || "",
+          city:        form.city?.trim()  || "",
+          description: form.description?.trim() || "",
+          whatsapp:    form.whatsapp.trim(),
+          images:      imageUrls,
+        }])
+        .select()
+        .single();
+
+      if (insertError) throw insertError;
+
+      // 3. Recargar lista y abrir WhatsApp
       await loadRequests();
 
-      if (data?.whatsapp?.url) {
-        window.open(data.whatsapp.url, "_blank", "noopener,noreferrer");
+      const phone = (inserted.whatsapp || "").replace(/\D/g, "");
+      if (phone) {
+        const msg = encodeURIComponent(
+          `Hola, publiqué una solicitud en Yonkers App buscando: ${inserted.title}${inserted.brand ? ` (${inserted.brand})` : ""}. ¿Tienes disponible?`
+        );
+        window.open(`https://wa.me/${phone}?text=${msg}`, "_blank", "noopener,noreferrer");
       }
 
       setFiles([]);
