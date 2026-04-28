@@ -12,10 +12,13 @@ import {
   MapPin,
   Navigation,
   Phone,
+  Share2,
   Star,
   X,
 } from "lucide-react";
 import NearbyMap from "../map/NearbyMap";
+import StarRating from "../StarRating";
+import { useRatings } from "../../hooks/useRatings";
 
 const BACKEND =
   typeof window !== "undefined" && window.location.hostname === "localhost"
@@ -195,9 +198,15 @@ function WaIcon({ size = 18 }) {
 ───────────────────────────────────────────────────────────── */
 export default function PieceDetailModal({ piece, onClose, isFavorite, onToggleFavorite }) {
 
-  const [imgIndex,  setImgIndex]  = useState(0);
-  const [failedSet, setFailedSet] = useState(() => new Set());
+  const [imgIndex,      setImgIndex]      = useState(0);
+  const [failedSet,     setFailedSet]     = useState(() => new Set());
+  const [showRating,    setShowRating]    = useState(false);
+  const [pendingStar,   setPendingStar]   = useState(0);
+  const [ratingComment, setRatingComment] = useState("");
+  const [ratingDone,    setRatingDone]    = useState(false);
   const imgLenRef = useRef(0);
+
+  const { submitRating, getRating } = useRatings();
 
   useEffect(() => {
     setImgIndex(0);
@@ -317,6 +326,29 @@ export default function PieceDetailModal({ piece, onClose, isFavorite, onToggleF
    * piece.tiktok    = "@dymyonker";
    * ─────────────────────────────────────────────────────────────
    */
+
+  const existingRating = getRating(piece.id);
+
+  async function handleSharePiece() {
+    const text = [title, brand, years].filter(Boolean).join(" · ");
+    const url  = window.location.href;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: text, text: `Encontré esto en Yonkers: ${text}`, url });
+      } catch { /* usuario canceló */ }
+    } else {
+      try {
+        await navigator.clipboard.writeText(`${text} — ${url}`);
+      } catch { /* silencioso */ }
+    }
+  }
+
+  async function handleSubmitRating() {
+    if (!pendingStar) return;
+    await submitRating({ pieceId: piece.id, sellerId: piece.owner_id, stars: pendingStar, comment: ratingComment });
+    setRatingDone(true);
+    setTimeout(() => { setShowRating(false); setRatingDone(false); }, 1800);
+  }
 
   function goNext() {
     if (!multiImage) return;
@@ -488,6 +520,40 @@ export default function PieceDetailModal({ piece, onClose, isFavorite, onToggleF
               ))}
           </div>
 
+          {/* ── SECCIÓN RATING ── */}
+          <div style={st.ratingSection}>
+            {existingRating && !showRating ? (
+              <div style={st.ratingExisting}>
+                <StarRating value={existingRating.stars} size={18} readonly />
+                <span style={st.ratingExistingTxt}>Tu calificación</span>
+                <button style={st.ratingEditBtn} onClick={() => { setPendingStar(existingRating.stars); setRatingComment(existingRating.comment || ""); setShowRating(true); }}>Editar</button>
+              </div>
+            ) : !showRating ? (
+              <button style={st.ratingPrompt} onClick={() => setShowRating(true)}>
+                <Star size={14} fill="#f59e0b" color="#f59e0b" />
+                <span>Calificar esta pieza</span>
+              </button>
+            ) : ratingDone ? (
+              <div style={st.ratingThanks}>¡Gracias por tu calificación!</div>
+            ) : (
+              <div style={st.ratingForm}>
+                <div style={st.ratingFormTitle}>¿Cómo calificarías esta pieza?</div>
+                <StarRating value={pendingStar} onChange={setPendingStar} size={30} />
+                <textarea
+                  placeholder="Comentario opcional..."
+                  value={ratingComment}
+                  onChange={(e) => setRatingComment(e.target.value)}
+                  style={st.ratingTextarea}
+                  rows={2}
+                />
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button style={st.ratingCancelBtn} onClick={() => setShowRating(false)}>Cancelar</button>
+                  <button style={{ ...st.ratingSubmitBtn, opacity: pendingStar ? 1 : 0.45 }} onClick={handleSubmitRating} disabled={!pendingStar}>Enviar</button>
+                </div>
+              </div>
+            )}
+          </div>
+
           {coords ? (
             <div style={st.mapWrap}>
               <NearbyMap
@@ -507,13 +573,12 @@ export default function PieceDetailModal({ piece, onClose, isFavorite, onToggleF
         {/* ══════ FOOTER STICKY ══════ */}
         <div style={st.footer}>
           <button
-            style={{ ...st.btnRoute, ...(!coords ? st.btnDisabled : {}) }}
-            onClick={openMaps}
-            disabled={!coords}
+            style={st.btnShare}
+            onClick={handleSharePiece}
             type="button"
+            aria-label="Compartir"
           >
-            <Navigation size={16} />
-            Cómo llegar
+            <Share2 size={17} />
           </button>
 
           <button
@@ -526,9 +591,19 @@ export default function PieceDetailModal({ piece, onClose, isFavorite, onToggleF
             Contactar por WhatsApp
           </button>
 
-          {cleanPhone && (
+          {cleanPhone ? (
             <button style={st.btnCall} onClick={callPhone} type="button" aria-label="Llamar">
               <Phone size={18} />
+            </button>
+          ) : (
+            <button
+              style={{ ...st.btnRoute, ...(!coords ? st.btnDisabled : {}) }}
+              onClick={openMaps}
+              disabled={!coords}
+              type="button"
+              aria-label="Cómo llegar"
+            >
+              <Navigation size={17} />
             </button>
           )}
         </div>
@@ -668,13 +743,6 @@ const st = {
     display: "flex", gap: 10, alignItems: "stretch",
     boxShadow: "0 -8px 24px rgba(0,0,0,.07)", zIndex: 10, flexShrink: 0,
   },
-  btnRoute: {
-    flex: "0 0 auto", height: 50, paddingLeft: 16, paddingRight: 16,
-    borderRadius: 14, border: "none", background: "#1d4ed8", color: "#fff",
-    fontSize: 13, fontWeight: 600, display: "flex", alignItems: "center",
-    justifyContent: "center", gap: 7, cursor: "pointer", whiteSpace: "nowrap",
-    fontFamily: "'DM Sans', system-ui, sans-serif", transition: "opacity .15s",
-  },
   btnWa: {
     flex: 1, height: 50, borderRadius: 14, border: "none",
     background: "#16a34a", color: "#fff", fontSize: 14, fontWeight: 600,
@@ -689,4 +757,38 @@ const st = {
     display: "flex", alignItems: "center", justifyContent: "center",
     cursor: "pointer", color: "#6b7280",
   },
+  btnShare: {
+    flex: "0 0 50px", height: 50, borderRadius: 14,
+    border: "1px solid #e5e7eb", background: "#f9fafb",
+    display: "flex", alignItems: "center", justifyContent: "center",
+    cursor: "pointer", color: "#1d4ed8",
+  },
+  btnRoute: {
+    flex: "0 0 50px", height: 50, borderRadius: 14,
+    border: "none", background: "#1d4ed8", color: "#fff",
+    display: "flex", alignItems: "center", justifyContent: "center",
+    cursor: "pointer",
+  },
+  ratingSection: { marginBottom: 14 },
+  ratingExisting: { display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", background: "#fefce8", borderRadius: 14, border: "1px solid #fde68a" },
+  ratingExistingTxt: { fontSize: 12, color: "#92400e", flex: 1 },
+  ratingEditBtn: { fontSize: 11, color: "#1d4ed8", background: "none", border: "none", cursor: "pointer", fontWeight: 600, padding: "2px 6px" },
+  ratingPrompt: {
+    display: "flex", alignItems: "center", gap: 7,
+    background: "none", border: "1px dashed #fde68a",
+    borderRadius: 14, padding: "10px 14px", cursor: "pointer",
+    color: "#92400e", fontSize: 13, fontWeight: 500, width: "100%",
+    transition: "background 0.15s",
+  },
+  ratingForm: { background: "#fafafa", border: "1px solid #f0f0f0", borderRadius: 14, padding: "14px 14px", display: "flex", flexDirection: "column", gap: 10 },
+  ratingFormTitle: { fontSize: 13, fontWeight: 600, color: "#111827" },
+  ratingTextarea: {
+    resize: "none", borderRadius: 10, border: "1px solid #e5e7eb",
+    padding: "8px 10px", fontSize: 13, color: "#374151",
+    fontFamily: "'DM Sans', system-ui, sans-serif", outline: "none",
+    background: "#fff",
+  },
+  ratingCancelBtn: { flex: 1, height: 38, borderRadius: 10, border: "1px solid #e5e7eb", background: "#fff", fontSize: 13, cursor: "pointer", color: "#6b7280" },
+  ratingSubmitBtn: { flex: 2, height: 38, borderRadius: 10, border: "none", background: "#f59e0b", fontSize: 13, fontWeight: 700, cursor: "pointer", color: "#fff", transition: "opacity .15s" },
+  ratingThanks: { textAlign: "center", padding: "12px 14px", fontSize: 14, fontWeight: 600, color: "#16a34a", background: "#f0fdf4", borderRadius: 14, border: "1px solid #bbf7d0" },
 };

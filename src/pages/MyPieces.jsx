@@ -1,8 +1,18 @@
-import { useEffect, useMemo, useState, useRef } from "react";
-import { Plus, Trash2, X, Search, ArrowLeft, Car, DollarSign, Eye } from "lucide-react";
+import { useEffect, useMemo, useState, useRef, useCallback } from "react";
+import { Plus, Trash2, X, Search, ArrowLeft, Car, DollarSign, Eye, CheckCircle } from "lucide-react";
+
+const SOLD_KEY = "yonkers_sold_pieces";
+function loadSold() {
+  try { return new Set(JSON.parse(localStorage.getItem(SOLD_KEY) || "[]")); }
+  catch { return new Set(); }
+}
+function saveSold(set) {
+  localStorage.setItem(SOLD_KEY, JSON.stringify([...set]));
+}
 import { supabase } from "../lib/supabase";
 import { useNavigate } from "react-router-dom";
 import { useCart } from "../hooks/useCart";
+import { compressImages } from "../lib/compressImage";
 
 const API    = "/api";
 const BLUE   = "#1e3a8a";
@@ -50,6 +60,18 @@ function VehicleCard({ v, onDelete, onAddToCart, inCart }) {
     : null;
   const hasPhoto = !!imgs[0];
 
+  // Estado vendido — persiste en localStorage
+  const [sold, setSold] = useState(() => loadSold().has(String(v.id)));
+  function toggleSold() {
+    setSold((prev) => {
+      const set = loadSold();
+      if (prev) set.delete(String(v.id));
+      else      set.add(String(v.id));
+      saveSold(set);
+      return !prev;
+    });
+  }
+
   return (
     <div style={vc.card}>
       {/* ── Imagen izquierda ── */}
@@ -69,8 +91,8 @@ function VehicleCard({ v, onDelete, onAddToCart, inCart }) {
           </div>
         )}
 
-        {/* Badge disponible */}
-        <div style={vc.availBadge}>Disponible</div>
+        {/* Badge estado */}
+        <div style={sold ? vc.soldBadge : vc.availBadge}>{sold ? "Vendido" : "Disponible"}</div>
       </div>
 
       {/* ── Contenido derecho ── */}
@@ -110,6 +132,15 @@ function VehicleCard({ v, onDelete, onAddToCart, inCart }) {
               <svg width="13" height="13" viewBox="0 0 24 24" fill={inCart ? "#f59e0b" : "none"} stroke={inCart ? "#f59e0b" : "#9ca3af"} strokeWidth="2">
                 <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
               </svg>
+            </button>
+
+            {/* Toggle vendido */}
+            <button
+              style={{ ...vc.iconBtn, background: sold ? "#fef2f2" : "#f0fdf4", borderColor: sold ? "#fca5a5" : "#bbf7d0" }}
+              onClick={toggleSold}
+              title={sold ? "Marcar disponible" : "Marcar vendido"}
+            >
+              <CheckCircle size={13} color={sold ? "#dc2626" : "#16a34a"} />
             </button>
 
             {/* WhatsApp */}
@@ -165,7 +196,8 @@ function VehicleFormModal({ onClose, onSaved }) {
       const token = await getToken();
       const fd    = new FormData();
       Object.entries(form).forEach(([k, v]) => fd.append(k, v));
-      files.forEach((f) => fd.append("images", f));
+      const compressed = await compressImages(files);
+      compressed.forEach((f) => fd.append("images", f));
       const res = await fetch(`${API}/vehicles`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
@@ -545,6 +577,18 @@ const vc = {
     left: 6,
     background: "#dcfce7",
     color: "#16a34a",
+    fontSize: 9,
+    fontWeight: 700,
+    padding: "2px 7px",
+    borderRadius: 6,
+    letterSpacing: "0.03em",
+  },
+  soldBadge: {
+    position: "absolute",
+    top: 6,
+    left: 6,
+    background: "#fee2e2",
+    color: "#dc2626",
     fontSize: 9,
     fontWeight: 700,
     padding: "2px 7px",
@@ -934,55 +978,22 @@ const pg = {
   },
   empty: {
     textAlign: "center",
-    padding: "48px 20px",
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
+    padding: "48px 24px",
     color: "#9ca3af",
-    fontSize: 14,
   },
-  emptyTitle: { fontSize: 16, fontWeight: 700, color: "#374151", marginBottom: 6 },
-  emptySub:   { fontSize: 13, color: "#9ca3af", lineHeight: 1.5, maxWidth: 260 },
-  emptyBtn: {
-    marginTop: 16,
-    height: 44,
-    padding: "0 20px",
-    borderRadius: 13,
-    border: "none",
-    background: `linear-gradient(135deg, ${BLUE}, ${BLUEM})`,
-    color: "#fff",
-    fontSize: 14,
+  emptyIcon: { fontSize: 40, marginBottom: 10 },
+  emptyTitle: { fontSize: 16, fontWeight: 700, color: "#374151", margin: "0 0 4px" },
+  emptyText:  { fontSize: 13, margin: 0 },
+  soldBadge: {
+    position: "absolute",
+    top: 6,
+    left: 6,
+    background: "#fee2e2",
+    color: "#dc2626",
+    fontSize: 9,
     fontWeight: 700,
-    cursor: "pointer",
-    display: "flex",
-    alignItems: "center",
-    gap: 6,
-    fontFamily: "system-ui, sans-serif",
-    boxShadow: "0 4px 12px rgba(30,58,138,0.3)",
-  },
-  statsFooter: {
-    textAlign: "center",
-    fontSize: 12,
-    color: "#9ca3af",
-    padding: "10px",
-    background: "#fff",
-    borderRadius: 12,
-    border: "1px solid #f0f0f0",
-  },
-  toast: {
-    position: "fixed",
-    bottom: 90,
-    left: "50%",
-    transform: "translateX(-50%)",
-    background: "#111827",
-    color: "#fff",
-    padding: "10px 20px",
-    borderRadius: 40,
-    fontSize: 13,
-    fontWeight: 600,
-    zIndex: 9999,
-    whiteSpace: "nowrap",
-    boxShadow: "0 4px 20px rgba(0,0,0,0.3)",
-    animation: "fadeUp 0.25s ease",
+    padding: "2px 7px",
+    borderRadius: 6,
+    letterSpacing: "0.03em",
   },
 };

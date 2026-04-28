@@ -1011,7 +1011,7 @@ Reglas importantes:
     /* Agentic loop — GPT puede llamar herramientas múltiples veces */
     for (let round = 0; round < 5; round++) {
       const response = await openai.chat.completions.create({
-        model:       "gpt-4o",
+        model:       "gpt-4o-mini",
         max_tokens:  1024,
         tools:       CHAT_TOOLS,
         tool_choice: "auto",

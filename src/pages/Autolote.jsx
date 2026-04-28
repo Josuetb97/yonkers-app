@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Plus, Trash2, X } from "lucide-react";
 import { supabase } from "../lib/supabase";
+import { compressImages } from "../lib/compressImage";
 
 const API = "/api";
 
@@ -146,7 +147,8 @@ export default function Autolote() {
       fd.append("price", form.price);
       fd.append("whatsapp", form.whatsapp);
 
-      files.forEach((file) => {
+      const compressed = await compressImages(files);
+      compressed.forEach((file) => {
         fd.append("images", file);
       });
 

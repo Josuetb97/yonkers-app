@@ -68,9 +68,15 @@ export default function BottomNav({ active, onChange, hidden, cartCount = 0 }) {
    NAV ITEM
 ───────────────────────────────────── */
 function NavItem({ icon, label, isActive, onClick }) {
+  function handleClick(e) {
+    // Vibración táctil suave en dispositivos que lo soporten (gama media/alta)
+    if (navigator.vibrate) navigator.vibrate(8);
+    onClick(e);
+  }
+
   return (
     <button
-      onClick={onClick}
+      onClick={handleClick}
       type="button"
       aria-label={label}
       aria-current={isActive ? "page" : undefined}
@@ -83,16 +89,29 @@ function NavItem({ icon, label, isActive, onClick }) {
       <div
         style={{
           ...st.activeBar,
-          opacity:    isActive ? 1 : 0,
-          transform:  isActive ? "scaleX(1)" : "scaleX(0)",
+          opacity:   isActive ? 1 : 0,
+          transform: isActive ? "translateX(-50%) scaleX(1)" : "translateX(-50%) scaleX(0)",
         }}
       />
+
+      {/* Círculo de fondo activo */}
+      <div style={{
+        position: "absolute",
+        width: 40, height: 40,
+        borderRadius: "50%",
+        background: isActive ? "rgba(26,45,90,0.07)" : "transparent",
+        transition: "background 0.2s",
+        top: "50%", left: "50%",
+        transform: "translate(-50%, -42%)",
+        pointerEvents: "none",
+      }} />
 
       {/* Ícono */}
       <div
         style={{
-          transform:  isActive ? "translateY(-1px) scale(1.08)" : "scale(1)",
-          transition: "transform .2s cubic-bezier(.34,1.56,.64,1)",
+          transform:  isActive ? "translateY(-1px) scale(1.12)" : "scale(1)",
+          transition: "transform .25s cubic-bezier(.34,1.56,.64,1)",
+          position: "relative",
         }}
       >
         {icon}
@@ -231,32 +250,5 @@ const st = {
     letterSpacing: "0.01em",
     transition: "color .2s, font-weight .2s",
     fontFamily: "'Barlow', system-ui, sans-serif",
-  },
-
-  /* Botón central */
-  centerBtn: {
-    position: "relative",
-    top: -22,
-    width: 62,
-    height: 62,
-    borderRadius: "50%",
-    background: "#FFD200",
-    border: "none",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    cursor: "pointer",
-    transition: "transform .15s ease, box-shadow .2s",
-    transform: "translateY(-22px) scale(1)",
-    WebkitTapHighlightColor: "transparent",
-    flexShrink: 0,
-  },
-
-  centerRing: {
-    position: "absolute",
-    inset: -5,
-    borderRadius: "50%",
-    border: "2px solid rgba(250,204,21,0.3)",
-    pointerEvents: "none",
   },
 };

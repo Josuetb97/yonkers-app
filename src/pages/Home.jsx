@@ -4,19 +4,19 @@ import {
   useCallback,
   useRef,
 } from "react";
-import { Menu, Camera, X, SlidersHorizontal, Heart, Mic, QrCode } from "lucide-react";
+import { Menu, Camera, X, Heart, Mic } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 import PieceCard from "../components/PieceCard";
 import PieceDetailModal from "../components/modals/PieceDetailModal";
-import VinScannerModal from "../components/modals/VinScannerModal";
-import PhotoSearchModal from "../components/modals/PhotoSearchModal";
 import { PieceGridSkeleton } from "../components/ui/Skeleton";
 import { useToast } from "../components/ui/Toast";
 import { useFavorites } from "../hooks/useFavorites";
 import { useCart } from "../hooks/useCart";
 import { useAnalytics } from "../hooks/useAnalytics";
 import { useVoiceSearch } from "../hooks/useVoiceSearch";
+import { useRecentlyViewed } from "../hooks/useRecentlyViewed";
+import PhotoSearchModal from "../components/modals/PhotoSearchModal";
 
 const API = import.meta.env.VITE_API_URL || "/api";
 
@@ -62,8 +62,8 @@ export default function Home({ user, openLogin }) {
   const { toast } = useToast();
   const { favorites, toggleFavorite, isFavorite } = useFavorites();
   const { addToCart, isInCart } = useCart();
-  const [showFavs,     setShowFavs]     = useState(false);
-  const [showVinModal,   setShowVinModal]   = useState(false);
+  const { items: recentPieces, addPiece: addToRecent } = useRecentlyViewed();
+  const [showFavs,       setShowFavs]       = useState(false);
   const [showPhotoModal, setShowPhotoModal] = useState(false);
   const [showMenu,       setShowMenu]       = useState(false);
   const [voiceError,     setVoiceError]     = useState("");
@@ -76,13 +76,6 @@ export default function Home({ user, openLogin }) {
     },
     onError: (msg) => setVoiceError(msg),
   });
-
-  /* ── VIN decodificado → poner query ── */
-  function handleVinDecoded({ query: vinQuery }) {
-    setQuery(vinQuery);
-    setActiveCategory("all");
-    setShowVinModal(false);
-  }
 
   /* ── Cuántos filtros activos ── */
   const activeFilterCount = Object.values(filters).filter(Boolean).length;
@@ -135,7 +128,8 @@ export default function Home({ user, openLogin }) {
   const handleOpenCard = useCallback((p) => {
     setSelectedPiece(p);
     setSelectedId(p.id);
-  }, []);
+    addToRecent(p);
+  }, [addToRecent]);
 
   /* ── Heart: favorito + carrito ── */
   function handleToggleFavorite(piece) {
@@ -241,19 +235,6 @@ export default function Home({ user, openLogin }) {
             <span style={st.country}>HN</span>
           </div>
 
-          {/* Botón filtros */}
-          <button
-            style={{ ...st.camBtn, position: "relative" }}
-            type="button"
-            aria-label="Filtros"
-            onClick={() => { setPendingFilters(filters); setShowFilters(true); }}
-          >
-            <SlidersHorizontal size={18} color="#fff" strokeWidth={1.8} />
-            {activeFilterCount > 0 && (
-              <span style={st.filterBadge}>{activeFilterCount}</span>
-            )}
-          </button>
-
           {/* Botón voz */}
           {voiceSupported && (
             <button
@@ -281,15 +262,6 @@ export default function Home({ user, openLogin }) {
             <Camera size={18} color="#fff" strokeWidth={1.8} />
           </button>
 
-          {/* Botón VIN */}
-          <button
-            style={st.camBtn}
-            type="button"
-            aria-label="Escanear VIN"
-            onClick={() => setShowVinModal(true)}
-          >
-            <QrCode size={18} color="#fff" strokeWidth={1.8} />
-          </button>
         </div>
 
         {/* ── Chips de categoría + favoritos ── */}
@@ -329,6 +301,39 @@ export default function Home({ user, openLogin }) {
           CONTENIDO
       ══════════════════════════════ */}
       <div style={{ paddingTop: TOP_AREA_H }}>
+
+        {/* ── Vistas recientemente ── */}
+        {recentPieces.length > 0 && !showFavs && !query && (
+          <div style={st.recentWrap}>
+            <div style={st.recentHeader}>
+              <span style={st.recentTitle}>Vistas recientemente</span>
+            </div>
+            <div style={st.recentScroll}>
+              {recentPieces.map((p) => {
+                const imgSrc = p.images?.length
+                  ? (p.images[0].startsWith("http") ? p.images[0] : `${import.meta.env.VITE_BACKEND_URL || ""}${p.images[0]}`)
+                  : null;
+                return (
+                  <button
+                    key={p.id}
+                    style={st.recentCard}
+                    onClick={() => handleOpenCard(p)}
+                    type="button"
+                  >
+                    {imgSrc ? (
+                      <img src={imgSrc} alt={p.title} style={st.recentImg} />
+                    ) : (
+                      <div style={st.recentNoImg} />
+                    )}
+                    <div style={st.recentLabel} title={p.title}>{p.title || "Pieza"}</div>
+                    {p.brand && <div style={st.recentSub}>{p.brand}</div>}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* Banner favoritos vacíos */}
         {showFavs && favorites.length === 0 && (
           <div style={st.favBanner}>
@@ -474,18 +479,8 @@ export default function Home({ user, openLogin }) {
       <PhotoSearchModal
         open={showPhotoModal}
         onClose={() => setShowPhotoModal(false)}
-        onSubmit={(query) => { setQuery(query); setShowPhotoModal(false); }}
+        onSubmit={(q) => { setQuery(q); setShowPhotoModal(false); }}
       />
-
-      {/* ══════════════════════════════
-          MODAL VIN SCANNER
-      ══════════════════════════════ */}
-      {showVinModal && (
-        <VinScannerModal
-          onClose={() => setShowVinModal(false)}
-          onDecoded={handleVinDecoded}
-        />
-      )}
 
       {/* ══ VOICE LISTENING INDICATOR ══ */}
       {listening && (
@@ -506,7 +501,6 @@ export default function Home({ user, openLogin }) {
           gap: 8,
           boxShadow: "0 4px 20px rgba(239,68,68,0.4)",
           whiteSpace: "nowrap",
-          animation: "fadeUp 0.25s ease",
         }}>
           🎙️ Escuchando… habla ahora
         </div>
@@ -531,6 +525,7 @@ export default function Home({ user, openLogin }) {
           gap: 8,
           boxShadow: "0 4px 20px rgba(0,0,0,0.3)",
           whiteSpace: "nowrap",
+          cursor: "pointer",
         }}
           onClick={() => setVoiceError("")}
         >
@@ -951,12 +946,10 @@ const st = {
     border: "1.5px solid #e5e7eb",
     background: "#fff",
     fontSize: 14,
-    fontWeight: 600,
     cursor: "pointer",
-    color: "#374151",
   },
 
-  applyBtn: {
+  applyBtn2: {
     flex: 2,
     padding: 13,
     borderRadius: 12,
@@ -967,4 +960,24 @@ const st = {
     fontWeight: 700,
     cursor: "pointer",
   },
+
+  recentWrap: { padding: "14px 14px 4px" },
+  recentHeader: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 },
+  recentTitle: { fontSize: 12, fontWeight: 700, color: "#374151", textTransform: "uppercase", letterSpacing: "0.06em" },
+  recentScroll: {
+    display: "flex", gap: 10, overflowX: "auto",
+    WebkitOverflowScrolling: "touch",
+    scrollbarWidth: "none", msOverflowStyle: "none",
+    paddingBottom: 4,
+  },
+  recentCard: {
+    flexShrink: 0, width: 88, background: "none", border: "1px solid #f0f0f0",
+    borderRadius: 12, padding: 0, cursor: "pointer", overflow: "hidden",
+    display: "flex", flexDirection: "column", textAlign: "left",
+    transition: "box-shadow 0.15s",
+  },
+  recentImg: { width: "100%", height: 66, objectFit: "cover", display: "block" },
+  recentNoImg: { width: "100%", height: 66, background: "#f3f4f6" },
+  recentLabel: { fontSize: 11, fontWeight: 600, color: "#111827", padding: "5px 6px 1px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" },
+  recentSub:   { fontSize: 10, color: "#9ca3af", padding: "0 6px 5px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" },
 };

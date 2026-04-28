@@ -3,63 +3,16 @@ import react from "@vitejs/plugin-react";
 
 export default defineConfig({
   plugins: [react()],
-
-  /* ===============================
-     BUILD
-  =============================== */
-  build: {
-    outDir: "dist",
-    sourcemap: true,
-  },
-
-  /* ===============================
-     DEV SERVER
-  =============================== */
+  cacheDir: "/tmp/vite-cache",
+  build: { outDir: "dist", sourcemap: true },
   server: {
-    host: "0.0.0.0", // acceso desde red (celular)
+    host: "0.0.0.0",
     port: 5173,
-
-    /* 🔥 FIX HMR — el servidor escucha en 0.0.0.0 pero el cliente
-       se conecta a localhost (para evitar ERR_ADDRESS_INVALID en browser) */
-    hmr: {
-      protocol: "ws",
-      host: "localhost",
-      port: 5173,
-      clientPort: 5173,
-    },
-
+    hmr: { protocol: "ws", host: "localhost", port: 5173, clientPort: 5173 },
     proxy: {
-      /* ===============================
-         API → BACKEND
-      =============================== */
-      "/api": {
-        target: "http://127.0.0.1:3001",
-        changeOrigin: true,
-        secure: false,
-
-        configure: (proxy) => {
-          proxy.on("error", (err) => {
-            console.error("❌ Proxy error:", err.message);
-          });
-        },
-      },
-
-      /* ===============================
-         IMAGES → BACKEND
-      =============================== */
-      "/uploads": {
-        target: "http://127.0.0.1:3001",
-        changeOrigin: true,
-        secure: false,
-      },
+      "/api": { target: "http://127.0.0.1:3001", changeOrigin: true, secure: false },
+      "/uploads": { target: "http://127.0.0.1:3001", changeOrigin: true, secure: false },
     },
   },
-
-  /* ===============================
-     PREVIEW (PRODUCTION TEST)
-  =============================== */
-  preview: {
-    host: true,
-    port: 4173,
-  },
+  preview: { host: true, port: 4173 },
 });

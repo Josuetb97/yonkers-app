@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
 import SellerOnboardingModal from "../../components/SellerOnboardingModal";
+import { compressImages } from "../../lib/compressImage";
 
 const API = import.meta.env.VITE_API_URL || "/api";
 
@@ -650,7 +651,8 @@ export default function Admin() {
 
     const fd = new FormData();
     Object.entries(form).forEach(([k, v]) => fd.append(k, v ?? ""));
-    files.forEach((f) => fd.append("images", f));
+    const compressed = await compressImages(files);
+    compressed.forEach((f) => fd.append("images", f));
 
     try {
       // Backend only has POST /api/pieces (no PUT).
