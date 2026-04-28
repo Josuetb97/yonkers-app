@@ -4,6 +4,7 @@ import { ArrowLeft, MapPin, MessageCircle } from "lucide-react";
 import PieceCard from "../components/PieceCard";
 import PieceDetailModal from "../components/modals/PieceDetailModal";
 import { useAnalytics } from "../hooks/useAnalytics";
+import { supabase } from "../lib/supabase";
 
 const API     = import.meta.env.VITE_API_URL || "/api";
 const BACKEND = import.meta.env.VITE_BACKEND_URL || "";
@@ -165,13 +166,18 @@ export default function SellerProfile({ user, openLogin }) {
     if (ownerId) track("seller_profile", "seller", { seller_id: ownerId });
   }, [ownerId]);
 
-  /* ── Fetch piezas del vendedor ── */
+  /* ── Fetch piezas del vendedor (Supabase directo) ── */
   const fetchPieces = useCallback(async () => {
     if (!ownerId) return;
     try {
       setLoading(true);
-      const res  = await fetch(`${API}/pieces?owner_id=${encodeURIComponent(ownerId)}`);
-      const data = await res.json();
+      const { data, error } = await supabase
+        .from("pieces")
+        .select("*")
+        .eq("owner_id", ownerId)
+        .order("created_at", { ascending: false })
+        .limit(200);
+      if (error) throw error;
       setPieces(Array.isArray(data) ? data : []);
     } catch {
       setPieces([]);
@@ -559,7 +565,6 @@ const s = {
     marginBottom: 14,
   },
   grid: {
-    display: "grid",
     gridTemplateColumns: "repeat(2, 1fr)",
     gap: 14,
   },

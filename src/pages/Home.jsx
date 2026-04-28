@@ -17,6 +17,7 @@ import { useAnalytics } from "../hooks/useAnalytics";
 import { useVoiceSearch } from "../hooks/useVoiceSearch";
 import { useRecentlyViewed } from "../hooks/useRecentlyViewed";
 import PhotoSearchModal from "../components/modals/PhotoSearchModal";
+import { supabase } from "../lib/supabase";
 
 const API = import.meta.env.VITE_API_URL || "/api";
 
@@ -87,23 +88,50 @@ export default function Home({ user, openLogin }) {
     );
   }, [selectedPiece]);
 
-  /* ── Fetch ── */
+  /* ── Fetch (Supabase directo) ── */
   const fetchPieces = useCallback(async (searchText = "", category = "all", f = filters) => {
     try {
       setLoading(true);
-      const params = new URLSearchParams();
-      if (searchText.trim())    params.set("query",     searchText.trim());
-      if (category !== "all")   params.set("category",  category);
-      if (f.condition && f.condition !== "Todos") params.set("condition", f.condition);
-      if (f.minPrice)           params.set("min_price", f.minPrice);
-      if (f.maxPrice)           params.set("max_price", f.maxPrice);
-      if (f.yearFrom)           params.set("year_from", f.yearFrom);
-      if (f.yearTo)             params.set("year_to",   f.yearTo);
+      let q = supabase.from("pieces").select("*");
 
-      const res  = await fetch(`${API}/pieces?${params.toString()}`);
-      if (!res.ok) throw new Error("Request failed");
-      const data = await res.json();
-      setPieces(Array.isArray(data) ? data : []);
+      // Busqueda de texto
+      if (searchText.trim()) {
+        const t = searchText.trim();
+        q = q.or(`title.ilike.%${t}%,brand.ilike.%${t}%,years.ilike.%${t}%,yonker.ilike.%${t}%,city.ilike.%${t}%`);
+      }
+
+      // Categoria
+      if (category && category !== "all") {
+        q = q.ilike("title", `%${category}%`);
+      }
+
+      // Condicion
+      if (f.condition && f.condition !== "Todos") {
+        q = q.ilike("condition", `%${f.condition}%`);
+      }
+
+      // Precio
+      if (f.minPrice) q = q.gte("price", Number(f.minPrice));
+      if (f.maxPrice) q = q.lte("price", Number(f.maxPrice));
+
+      q = q.order("created_at", { ascending: false }).limit(200);
+
+      const { data, error } = await q;
+      if (error) throw error;
+
+      // Filtro de año (client-side ya que years es texto)
+      let result = Array.isArray(data) ? data : [];
+      if (f.yearFrom || f.yearTo) {
+        result = result.filter((p) => {
+          const y = parseInt((p.years || "").replace(/\D/g, ""), 10);
+          if (isNaN(y)) return true;
+          if (f.yearFrom && y < Number(f.yearFrom)) return false;
+          if (f.yearTo   && y > Number(f.yearTo))   return false;
+          return true;
+        });
+      }
+
+      setPieces(result);
     } catch (err) {
       console.error("❌ Error:", err);
       setPieces([]);
@@ -971,7 +999,6 @@ const st = {
     paddingBottom: 4,
   },
   recentCard: {
-    flexShrink: 0, width: 88, background: "none", border: "1px solid #f0f0f0",
     borderRadius: 12, padding: 0, cursor: "pointer", overflow: "hidden",
     display: "flex", flexDirection: "column", textAlign: "left",
     transition: "box-shadow 0.15s",
