@@ -1,23 +1,19 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Send, Bot, User, MessageSquare } from "lucide-react";
+import { Send, Bot, User, Sparkles, ChevronRight } from "lucide-react";
 
-const API     = import.meta.env.VITE_API_URL || "/api";
-const BACKEND = import.meta.env.VITE_BACKEND_URL || "";
+const API = import.meta.env.VITE_API_URL || "/api";
 
 /* ── Sugerencias iniciales ── */
 const SUGGESTIONS = [
-  "¿Tienes transmisiones para Honda Civic 2015?",
-  "Busco un motor Toyota Corolla en San Pedro Sula",
-  "Mi carro hace ruido al frenar, ¿qué necesito?",
-  "Piezas de suspensión para camioneta Ford",
+  { emoji: "🔧", text: "Transmisiones para Honda Civic 2015" },
+  { emoji: "⚙️", text: "Motor Toyota Corolla en SPS" },
+  { emoji: "🔊", text: "Mi carro hace ruido al frenar, ¿qué necesito?" },
+  { emoji: "🚗", text: "Suspensión para camioneta Ford" },
 ];
 
-/* ── Burbuja de pieza encontrada ── */
+/* ── Chip de pieza ── */
 function PieceChip({ piece }) {
-  const imgSrc = piece.images?.length
-    ? `${BACKEND}${piece.images[0]}`
-    : null;
-
+  const imgSrc = piece.images?.length ? piece.images[0] : null;
   const priceText = piece.price
     ? `L ${Number(piece.price).toLocaleString("es-HN")}`
     : null;
@@ -29,34 +25,34 @@ function PieceChip({ piece }) {
     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, "_blank");
   }
 
+  const isGood = /buen|nuevo/i.test(piece.condition || "");
+
   return (
-    <div style={cs.pieceChip}>
-      {imgSrc ? (
-        <img src={imgSrc} alt={piece.title} style={cs.pieceImg} />
-      ) : (
-        <div style={cs.pieceNoImg}>📦</div>
-      )}
-      <div style={cs.pieceInfo}>
-        <div style={cs.pieceTitle}>{piece.title}</div>
-        <div style={cs.pieceSub}>{piece.brand} · {piece.years}</div>
-        <div style={cs.pieceMeta}>
-          <span style={cs.pieceYonker}>📍 {piece.yonker}</span>
-          {priceText && <span style={cs.piecePrice}>{priceText}</span>}
+    <div style={cs.chip}>
+      <div style={cs.imgWrap}>
+        {imgSrc ? (
+          <img src={imgSrc} alt={piece.title} style={cs.img} />
+        ) : (
+          <div style={cs.noImg}>🔩</div>
+        )}
+      </div>
+      <div style={cs.info}>
+        <div style={cs.title}>{piece.title}</div>
+        <div style={cs.sub}>{[piece.brand, piece.years].filter(Boolean).join(" · ")}</div>
+        <div style={cs.row}>
+          {piece.city && <span style={cs.city}>📍 {piece.city}</span>}
+          {priceText && <span style={cs.price}>{priceText}</span>}
         </div>
         {piece.condition && (
-          <span style={{
-            ...cs.pieceBadge,
-            background: /buen|nuevo/i.test(piece.condition) ? "#dcfce7" : "#f3f4f6",
-            color:      /buen|nuevo/i.test(piece.condition) ? "#166534" : "#374151",
-          }}>
+          <span style={{ ...cs.badge, background: isGood ? "#dcfce7" : "#f1f5f9", color: isGood ? "#15803d" : "#64748b" }}>
             {piece.condition}
           </span>
         )}
       </div>
       {piece.whatsapp && (
-        <button style={cs.waBtn} onClick={openWhatsApp}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="#fff">
-            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+        <button style={cs.waBtn} onClick={openWhatsApp} title="Contactar por WhatsApp">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="#fff">
+            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
           </svg>
         </button>
       )}
@@ -67,15 +63,15 @@ function PieceChip({ piece }) {
 /* ── Indicador de escritura ── */
 function TypingIndicator() {
   return (
-    <div style={{ ...s.msgRow, justifyContent: "flex-start" }}>
-      <div style={s.botAvatar}>
-        <Bot size={14} color="#fff" />
+    <div style={s.row}>
+      <div style={s.avatar}>
+        <Bot size={13} color="#fff" />
       </div>
-      <div style={{ ...s.bubble, ...s.bubbleBot, padding: "12px 16px" }}>
-        <div style={s.typingDots}>
-          <span style={{ ...s.dot, animationDelay: "0ms"   }} />
-          <span style={{ ...s.dot, animationDelay: "180ms" }} />
-          <span style={{ ...s.dot, animationDelay: "360ms" }} />
+      <div style={{ ...s.bubble, ...s.bubbleBot, padding: "14px 18px" }}>
+        <div style={s.dots}>
+          <span style={{ ...s.dot, animationDelay: "0ms" }} />
+          <span style={{ ...s.dot, animationDelay: "200ms" }} />
+          <span style={{ ...s.dot, animationDelay: "400ms" }} />
         </div>
       </div>
     </div>
@@ -86,16 +82,24 @@ function TypingIndicator() {
    PÁGINA PRINCIPAL
 ════════════════════════════════════ */
 export default function Messages() {
-  const [messages,  setMessages]  = useState([]);
-  const [input,     setInput]     = useState("");
-  const [loading,   setLoading]   = useState(false);
+  const [messages, setMessages] = useState([]);
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
   const bottomRef = useRef(null);
-  const inputRef  = useRef(null);
+  const textareaRef = useRef(null);
 
-  /* Scroll al último mensaje */
+  /* Auto-scroll */
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
+
+  /* Auto-resize textarea */
+  useEffect(() => {
+    const ta = textareaRef.current;
+    if (!ta) return;
+    ta.style.height = "auto";
+    ta.style.height = Math.min(ta.scrollHeight, 120) + "px";
+  }, [input]);
 
   /* Enviar mensaje */
   const sendMessage = useCallback(async (text) => {
@@ -109,40 +113,45 @@ export default function Messages() {
     setMessages(history);
     setLoading(true);
 
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30000);
+
     try {
       const res = await fetch(`${API}/chat`, {
-        method:  "POST",
+        method: "POST",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({
+        body: JSON.stringify({
           messages: history.map((m) => ({ role: m.role, content: m.content })),
         }),
+        signal: controller.signal,
       });
 
+      clearTimeout(timeout);
       const data = await res.json();
 
-      if (!res.ok) throw new Error(data?.error || "Error del servidor");
+      if (!res.ok) throw new Error(data?.error || `Error ${res.status}`);
 
-      const botMsg = {
-        role:   "assistant",
-        content: data.text,
-        pieces:  data.pieces || [],
-        id:     Date.now() + 1,
-      };
-
-      setMessages((prev) => [...prev, botMsg]);
-    } catch (err) {
       setMessages((prev) => [
         ...prev,
         {
-          role:    "assistant",
-          content: "⚠️ Hubo un error conectando con el servidor. ¿Puedes intentarlo de nuevo?",
-          pieces:  [],
-          id:      Date.now() + 1,
+          role: "assistant",
+          content: data.text || "Lo siento, no pude generar una respuesta.",
+          pieces: data.pieces || [],
+          id: Date.now() + 1,
         },
+      ]);
+    } catch (err) {
+      clearTimeout(timeout);
+      const msg = err.name === "AbortError"
+        ? "⏱️ La solicitud tardó demasiado. Por favor intenta de nuevo."
+        : "⚠️ No pude conectarme al servidor. Verifica tu conexión e intenta de nuevo.";
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: msg, pieces: [], id: Date.now() + 1 },
       ]);
     } finally {
       setLoading(false);
-      inputRef.current?.focus();
+      textareaRef.current?.focus();
     }
   }, [input, messages, loading]);
 
@@ -158,54 +167,70 @@ export default function Messages() {
   return (
     <div style={s.page}>
 
-      {/* ── Header ── */}
+      {/* ── HEADER ── */}
       <div style={s.header}>
-        <div style={s.headerAvatar}>
-          <Bot size={20} color="#1e4b8f" />
+        <div style={s.headerGlow} />
+        <div style={s.headerInner}>
+          <div style={s.headerLeft}>
+            <div style={s.headerAvatar}>
+              <Bot size={22} color="#1e4b8f" strokeWidth={2.2} />
+            </div>
+            <div>
+              <div style={s.headerName}>Yonky IA</div>
+              <div style={s.headerStatus}>
+                <span style={s.statusDot} />
+                <span style={s.statusText}>En línea · Asistente de piezas</span>
+              </div>
+            </div>
+          </div>
+          <div style={s.headerBadge}>
+            <Sparkles size={11} color="#1e4b8f" />
+            <span>IA</span>
+          </div>
         </div>
-        <div>
-          <div style={s.headerName}>Yonky IA</div>
-          <div style={s.headerSub}>Asistente de piezas · siempre activo</div>
-        </div>
-        <div style={s.headerBadge}>IA</div>
       </div>
 
-      {/* ── Mensajes ── */}
+      {/* ── FEED ── */}
       <div style={s.feed}>
 
         {/* Pantalla de bienvenida */}
         {isEmpty && (
           <div style={s.welcome}>
-            <div style={s.welcomeIcon}>
-              <MessageSquare size={36} color="#facc15" />
+            <div style={s.welcomeRing}>
+              <div style={s.welcomeAvatar}>
+                <Bot size={40} color="#fff" strokeWidth={1.8} />
+              </div>
             </div>
-            <div style={s.welcomeTitle}>Hola, soy Yonky 👋</div>
+            <div style={s.welcomeTitle}>¡Hola, soy Yonky! 👋</div>
             <div style={s.welcomeText}>
-              Puedo buscar piezas en el inventario, identificar qué necesita tu vehículo y conectarte directo con el vendedor.
+              Tu asistente inteligente para encontrar piezas de autos en Honduras. Busco en el inventario real y te conecto con el vendedor.
             </div>
-            <div style={s.suggestions}>
+            <div style={s.suggGrid}>
               {SUGGESTIONS.map((sug) => (
                 <button
-                  key={sug}
-                  style={s.suggBtn}
-                  onClick={() => sendMessage(sug)}
+                  key={sug.text}
+                  style={s.suggCard}
+                  onClick={() => sendMessage(sug.text)}
                 >
-                  {sug}
+                  <span style={s.suggEmoji}>{sug.emoji}</span>
+                  <span style={s.suggText}>{sug.text}</span>
+                  <ChevronRight size={14} color="#9ca3af" />
                 </button>
               ))}
             </div>
           </div>
         )}
 
-        {/* Historial de mensajes */}
+        {/* Historial */}
         {messages.map((msg) => {
           const isUser = msg.role === "user";
           return (
-            <div key={msg.id} style={{ marginBottom: 16 }}>
-              <div style={{ ...s.msgRow, justifyContent: isUser ? "flex-end" : "flex-start" }}>
+            <div key={msg.id} style={{ marginBottom: 20 }}>
+              <div style={{ ...s.row, justifyContent: isUser ? "flex-end" : "flex-start" }}>
+
                 {!isUser && (
-                  <div style={s.botAvatar}>
-                    <Bot size={14} color="#fff" />
+                  <div style={s.avatar}>
+                    <Bot size={13} color="#fff" />
                   </div>
                 )}
 
@@ -213,25 +238,30 @@ export default function Messages() {
                   ...s.bubble,
                   ...(isUser ? s.bubbleUser : s.bubbleBot),
                 }}>
-                  <p style={s.bubbleText}>{msg.content}</p>
+                  {isUser ? (
+                    <p style={{ ...s.bubbleText, color: "#fff" }}>{msg.content}</p>
+                  ) : (
+                    <p style={{ ...s.bubbleText, color: "#1a1a2e" }}>{msg.content}</p>
+                  )}
                 </div>
 
                 {isUser && (
-                  <div style={s.userAvatar}>
-                    <User size={14} color="#1e4b8f" />
+                  <div style={s.avatarUser}>
+                    <User size={13} color="#1e4b8f" />
                   </div>
                 )}
               </div>
 
               {/* Piezas encontradas */}
               {!isUser && msg.pieces?.length > 0 && (
-                <div style={s.piecesSection}>
+                <div style={s.piecesWrap}>
                   <div style={s.piecesLabel}>
-                    🔍 {msg.pieces.length} resultado{msg.pieces.length !== 1 ? "s" : ""} encontrado{msg.pieces.length !== 1 ? "s" : ""}
+                    <span style={s.piecesCount}>{msg.pieces.length}</span>
+                    resultado{msg.pieces.length !== 1 ? "s" : ""} encontrado{msg.pieces.length !== 1 ? "s" : ""}
                   </div>
                   <div style={s.piecesList}>
-                    {msg.pieces.map((piece) => (
-                      <PieceChip key={piece.id} piece={piece} />
+                    {msg.pieces.map((p) => (
+                      <PieceChip key={p.id} piece={p} />
                     ))}
                   </div>
                 </div>
@@ -240,41 +270,51 @@ export default function Messages() {
           );
         })}
 
-        {/* Indicador de typing */}
         {loading && <TypingIndicator />}
-
         <div ref={bottomRef} />
       </div>
 
-      {/* ── Input ── */}
-      <div style={s.inputBar}>
-        <textarea
-          ref={inputRef}
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="Escribe tu consulta..."
-          style={s.textarea}
-          rows={1}
-          disabled={loading}
-        />
-        <button
-          style={{
-            ...s.sendBtn,
-            background: input.trim() && !loading ? "#1e4b8f" : "#e5e7eb",
-          }}
-          onClick={() => sendMessage()}
-          disabled={!input.trim() || loading}
-        >
-          <Send size={18} color={input.trim() && !loading ? "#fff" : "#9ca3af"} />
-        </button>
+      {/* ── INPUT BAR ── */}
+      <div style={s.inputWrap}>
+        <div style={s.inputBox}>
+          <textarea
+            ref={textareaRef}
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Escribe tu consulta..."
+            style={s.textarea}
+            rows={1}
+            disabled={loading}
+          />
+          <button
+            style={{
+              ...s.sendBtn,
+              background: input.trim() && !loading ? "linear-gradient(135deg,#1e4b8f,#2563eb)" : "#e5e7eb",
+              cursor: input.trim() && !loading ? "pointer" : "not-allowed",
+              transform: input.trim() && !loading ? "scale(1)" : "scale(0.95)",
+            }}
+            onClick={() => sendMessage()}
+            disabled={!input.trim() || loading}
+          >
+            <Send size={16} color={input.trim() && !loading ? "#fff" : "#9ca3af"} strokeWidth={2.5} />
+          </button>
+        </div>
+        <div style={s.inputHint}>Presiona Enter para enviar · Shift+Enter para nueva línea</div>
       </div>
 
-      {/* Animación de los puntos */}
       <style>{`
         @keyframes yonkyBounce {
-          0%, 80%, 100% { transform: translateY(0); opacity: 0.4; }
-          40%            { transform: translateY(-6px); opacity: 1; }
+          0%, 80%, 100% { transform: translateY(0); opacity: 0.35; }
+          40% { transform: translateY(-5px); opacity: 1; }
+        }
+        @keyframes fadeSlideUp {
+          from { opacity: 0; transform: translateY(8px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes pulse {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(74,222,128,0.4); }
+          50% { box-shadow: 0 0 0 5px rgba(74,222,128,0); }
         }
       `}</style>
     </div>
@@ -289,116 +329,191 @@ const s = {
     display: "flex",
     flexDirection: "column",
     height: "100dvh",
-    background: "#f3f4f6",
+    background: "#f0f4f8",
     fontFamily: "'DM Sans', 'Inter', system-ui, sans-serif",
+    overflow: "hidden",
   },
 
   /* Header */
   header: {
-    background: "linear-gradient(135deg,#1e4b8f,#0f3e82)",
-    padding: "14px 16px",
+    background: "linear-gradient(135deg, #0f2a5e 0%, #1e4b8f 60%, #2563eb 100%)",
+    flexShrink: 0,
+    position: "relative",
+    overflow: "hidden",
+    boxShadow: "0 4px 20px rgba(30,75,143,0.35)",
+  },
+  headerGlow: {
+    position: "absolute",
+    top: -40,
+    right: -40,
+    width: 150,
+    height: 150,
+    borderRadius: "50%",
+    background: "radial-gradient(circle, rgba(250,204,21,0.25) 0%, transparent 70%)",
+    pointerEvents: "none",
+  },
+  headerInner: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: "14px 18px",
+    position: "relative",
+    zIndex: 1,
+  },
+  headerLeft: {
     display: "flex",
     alignItems: "center",
     gap: 12,
-    boxShadow: "0 2px 12px rgba(0,0,0,0.18)",
-    flexShrink: 0,
   },
   headerAvatar: {
-    width: 42,
-    height: 42,
+    width: 46,
+    height: 46,
     borderRadius: "50%",
-    background: "#facc15",
+    background: "linear-gradient(135deg, #facc15, #f59e0b)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
+    boxShadow: "0 2px 10px rgba(250,204,21,0.5)",
     flexShrink: 0,
   },
-  headerName: { color: "#fff", fontWeight: 700, fontSize: 15 },
-  headerSub:  { color: "rgba(255,255,255,0.65)", fontSize: 12 },
+  headerName: {
+    color: "#fff",
+    fontWeight: 800,
+    fontSize: 16,
+    letterSpacing: "-0.3px",
+  },
+  headerStatus: {
+    display: "flex",
+    alignItems: "center",
+    gap: 5,
+    marginTop: 2,
+  },
+  statusDot: {
+    display: "inline-block",
+    width: 7,
+    height: 7,
+    borderRadius: "50%",
+    background: "#4ade80",
+    animation: "pulse 2s infinite",
+  },
+  statusText: {
+    color: "rgba(255,255,255,0.7)",
+    fontSize: 11,
+  },
   headerBadge: {
-    marginLeft: "auto",
+    display: "flex",
+    alignItems: "center",
+    gap: 4,
     background: "#facc15",
     color: "#1e4b8f",
     fontWeight: 800,
     fontSize: 11,
-    padding: "3px 10px",
+    padding: "5px 12px",
     borderRadius: 20,
+    letterSpacing: "0.5px",
   },
 
   /* Feed */
   feed: {
     flex: 1,
     overflowY: "auto",
-    padding: "16px 14px 8px",
+    padding: "20px 16px 12px",
     display: "flex",
     flexDirection: "column",
+    scrollBehavior: "smooth",
   },
 
   /* Welcome */
   welcome: {
     margin: "auto",
     textAlign: "center",
-    padding: "32px 20px",
+    padding: "24px 16px 32px",
     maxWidth: 360,
+    animation: "fadeSlideUp 0.4s ease",
   },
-  welcomeIcon: {
-    width: 72,
-    height: 72,
+  welcomeRing: {
+    width: 88,
+    height: 88,
     borderRadius: "50%",
-    background: "linear-gradient(135deg,#1e4b8f,#0f3e82)",
+    background: "linear-gradient(135deg, rgba(30,75,143,0.15), rgba(37,99,235,0.1))",
+    border: "2px solid rgba(30,75,143,0.2)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    margin: "0 auto 16px",
+    margin: "0 auto 18px",
+  },
+  welcomeAvatar: {
+    width: 68,
+    height: 68,
+    borderRadius: "50%",
+    background: "linear-gradient(135deg, #1e4b8f, #2563eb)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    boxShadow: "0 4px 20px rgba(30,75,143,0.35)",
   },
   welcomeTitle: {
     fontSize: 22,
     fontWeight: 800,
-    color: "#111827",
+    color: "#0f172a",
     marginBottom: 8,
+    letterSpacing: "-0.5px",
   },
   welcomeText: {
     fontSize: 14,
-    color: "#6b7280",
-    lineHeight: 1.55,
+    color: "#64748b",
+    lineHeight: 1.6,
     marginBottom: 24,
   },
-  suggestions: {
+  suggGrid: {
     display: "flex",
     flexDirection: "column",
     gap: 8,
   },
-  suggBtn: {
-    padding: "10px 16px",
+  suggCard: {
+    display: "flex",
+    alignItems: "center",
+    gap: 10,
+    padding: "12px 14px",
     background: "#fff",
-    border: "1.5px solid #e5e7eb",
-    borderRadius: 12,
+    border: "1.5px solid #e2e8f0",
+    borderRadius: 14,
     fontSize: 13,
-    color: "#1e4b8f",
+    color: "#1e293b",
     fontWeight: 500,
     cursor: "pointer",
     textAlign: "left",
-    transition: "border-color 0.15s, background 0.15s",
+    transition: "all 0.15s",
+    boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
+  },
+  suggEmoji: {
+    fontSize: 18,
+    flexShrink: 0,
+  },
+  suggText: {
+    flex: 1,
+    textAlign: "left",
   },
 
   /* Mensajes */
-  msgRow: {
+  row: {
     display: "flex",
     alignItems: "flex-end",
     gap: 8,
-    marginBottom: 2,
+    animation: "fadeSlideUp 0.25s ease",
   },
-  botAvatar: {
+  avatar: {
     width: 28,
     height: 28,
     borderRadius: "50%",
-    background: "linear-gradient(135deg,#1e4b8f,#0f3e82)",
+    background: "linear-gradient(135deg, #1e4b8f, #2563eb)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     flexShrink: 0,
+    boxShadow: "0 2px 8px rgba(30,75,143,0.3)",
   },
-  userAvatar: {
+  avatarUser: {
     width: 28,
     height: 28,
     borderRadius: "50%",
@@ -407,55 +522,74 @@ const s = {
     alignItems: "center",
     justifyContent: "center",
     flexShrink: 0,
+    boxShadow: "0 2px 8px rgba(250,204,21,0.4)",
   },
   bubble: {
-    maxWidth: "75%",
-    borderRadius: 18,
-    padding: "10px 14px",
+    maxWidth: "78%",
+    borderRadius: 20,
+    padding: "11px 15px",
     wordBreak: "break-word",
   },
   bubbleUser: {
-    background: "#1e4b8f",
-    borderBottomRightRadius: 4,
+    background: "linear-gradient(135deg, #1e4b8f, #2563eb)",
+    borderBottomRightRadius: 5,
+    boxShadow: "0 3px 12px rgba(30,75,143,0.25)",
   },
   bubbleBot: {
     background: "#fff",
-    boxShadow: "0 1px 4px rgba(0,0,0,0.08)",
-    borderBottomLeftRadius: 4,
+    borderBottomLeftRadius: 5,
+    boxShadow: "0 2px 10px rgba(0,0,0,0.07)",
+    border: "1px solid rgba(0,0,0,0.04)",
   },
   bubbleText: {
     margin: 0,
     fontSize: 14,
-    lineHeight: 1.5,
-    color: "inherit",
+    lineHeight: 1.55,
     whiteSpace: "pre-wrap",
   },
 
   /* Typing dots */
-  typingDots: {
+  dots: {
     display: "flex",
     gap: 5,
     alignItems: "center",
+    height: 16,
   },
   dot: {
     width: 7,
     height: 7,
     borderRadius: "50%",
-    background: "#9ca3af",
+    background: "#94a3b8",
     display: "inline-block",
-    animation: "yonkyBounce 1.2s infinite ease-in-out",
+    animation: "yonkyBounce 1.4s infinite ease-in-out",
   },
 
   /* Piezas */
-  piecesSection: {
-    marginTop: 8,
+  piecesWrap: {
+    marginTop: 10,
     marginLeft: 36,
+    animation: "fadeSlideUp 0.3s ease",
   },
   piecesLabel: {
     fontSize: 12,
-    fontWeight: 600,
-    color: "#6b7280",
+    color: "#64748b",
+    fontWeight: 500,
     marginBottom: 8,
+    display: "flex",
+    alignItems: "center",
+    gap: 6,
+  },
+  piecesCount: {
+    background: "linear-gradient(135deg, #1e4b8f, #2563eb)",
+    color: "#fff",
+    fontWeight: 800,
+    fontSize: 11,
+    width: 20,
+    height: 20,
+    borderRadius: "50%",
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
   },
   piecesList: {
     display: "flex",
@@ -464,119 +598,136 @@ const s = {
   },
 
   /* Input */
-  inputBar: {
-    padding: "10px 12px calc(env(safe-area-inset-bottom,0px) + 10px)",
+  inputWrap: {
+    padding: "10px 14px calc(env(safe-area-inset-bottom, 0px) + 10px)",
     background: "#fff",
-    borderTop: "1px solid #f0f0f0",
+    borderTop: "1px solid #e2e8f0",
+    flexShrink: 0,
+    boxShadow: "0 -6px 24px rgba(0,0,0,0.06)",
+  },
+  inputBox: {
     display: "flex",
     alignItems: "flex-end",
     gap: 10,
-    boxShadow: "0 -4px 16px rgba(0,0,0,0.06)",
-    flexShrink: 0,
+    background: "#f8fafc",
+    border: "1.5px solid #e2e8f0",
+    borderRadius: 24,
+    padding: "6px 6px 6px 16px",
+    transition: "border-color 0.2s, box-shadow 0.2s",
   },
   textarea: {
     flex: 1,
-    padding: "10px 14px",
-    borderRadius: 22,
-    border: "1.5px solid #e5e7eb",
-    background: "#f9fafb",
+    border: "none",
+    background: "transparent",
     fontSize: 14,
     outline: "none",
     resize: "none",
-    lineHeight: 1.4,
+    lineHeight: 1.5,
     maxHeight: 120,
     overflowY: "auto",
     fontFamily: "inherit",
-    color: "#111827",
+    color: "#0f172a",
+    padding: "4px 0",
   },
   sendBtn: {
-    width: 44,
-    height: 44,
+    width: 38,
+    height: 38,
     borderRadius: "50%",
     border: "none",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    cursor: "pointer",
-    transition: "background 0.2s",
+    transition: "all 0.2s",
     flexShrink: 0,
+  },
+  inputHint: {
+    fontSize: 10,
+    color: "#cbd5e1",
+    textAlign: "center",
+    marginTop: 6,
+    letterSpacing: "0.2px",
   },
 };
 
 /* Chips de pieza */
 const cs = {
-  pieceChip: {
+  chip: {
     background: "#fff",
-    borderRadius: 14,
-    border: "1px solid #e5e7eb",
+    borderRadius: 16,
+    border: "1px solid #e2e8f0",
     display: "flex",
     alignItems: "center",
-    gap: 10,
-    padding: 10,
-    boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
+    gap: 12,
+    padding: "10px 12px",
+    boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+    transition: "transform 0.15s, box-shadow 0.15s",
   },
-  pieceImg: {
-    width: 60,
-    height: 60,
-    objectFit: "cover",
-    borderRadius: 10,
+  imgWrap: {
     flexShrink: 0,
-    background: "#f3f4f6",
   },
-  pieceNoImg: {
-    width: 60,
-    height: 60,
-    borderRadius: 10,
-    background: "#f3f4f6",
+  img: {
+    width: 58,
+    height: 58,
+    objectFit: "cover",
+    borderRadius: 12,
+    background: "#f1f5f9",
+    display: "block",
+  },
+  noImg: {
+    width: 58,
+    height: 58,
+    borderRadius: 12,
+    background: "linear-gradient(135deg, #f1f5f9, #e2e8f0)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    fontSize: 24,
-    flexShrink: 0,
+    fontSize: 22,
   },
-  pieceInfo: {
+  info: {
     flex: 1,
     minWidth: 0,
     display: "flex",
     flexDirection: "column",
-    gap: 2,
+    gap: 3,
   },
-  pieceTitle: {
+  title: {
     fontSize: 13,
     fontWeight: 700,
-    color: "#111827",
+    color: "#0f172a",
     whiteSpace: "nowrap",
     overflow: "hidden",
     textOverflow: "ellipsis",
   },
-  pieceSub: {
+  sub: {
     fontSize: 11,
-    color: "#6b7280",
+    color: "#94a3b8",
   },
-  pieceMeta: {
+  row: {
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
+    gap: 4,
   },
-  pieceYonker: {
+  city: {
     fontSize: 11,
-    color: "#6b7280",
+    color: "#64748b",
   },
-  piecePrice: {
-    fontSize: 12,
-    fontWeight: 700,
+  price: {
+    fontSize: 13,
+    fontWeight: 800,
     color: "#1e4b8f",
   },
-  pieceBadge: {
+  badge: {
     fontSize: 10,
     fontWeight: 600,
     padding: "2px 8px",
     borderRadius: 20,
     alignSelf: "flex-start",
+    marginTop: 1,
   },
   waBtn: {
-    width: 38,
-    height: 38,
+    width: 40,
+    height: 40,
     borderRadius: "50%",
     background: "#16a34a",
     border: "none",
@@ -585,5 +736,7 @@ const cs = {
     justifyContent: "center",
     cursor: "pointer",
     flexShrink: 0,
+    boxShadow: "0 2px 10px rgba(22,163,74,0.35)",
+    transition: "transform 0.15s",
   },
 };
