@@ -32,6 +32,6 @@ const styles = {
 
   content: {
     flex: 1,
-    paddingBottom: 90,          // 🔥 espacio para BottomNav
+    paddingBottom: 72,          // espacio para BottomNav
   },
 };

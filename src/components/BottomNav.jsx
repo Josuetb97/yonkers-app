@@ -82,7 +82,7 @@ function NavItem({ icon, label, isActive, onClick }) {
       aria-current={isActive ? "page" : undefined}
       style={{
         ...st.item,
-        color: isActive ? "#1a2d5a" : "#b0b8c9",
+        color: isActive ? "#1e4b8f" : "#9ca3af",
       }}
     >
       {/* Indicador superior activo */}
@@ -97,12 +97,12 @@ function NavItem({ icon, label, isActive, onClick }) {
       {/* Círculo de fondo activo */}
       <div style={{
         position: "absolute",
-        width: 40, height: 40,
+        width: 38, height: 38,
         borderRadius: "50%",
-        background: isActive ? "rgba(26,45,90,0.07)" : "transparent",
+        background: isActive ? "rgba(30,75,143,0.07)" : "transparent",
         transition: "background 0.2s",
         top: "50%", left: "50%",
-        transform: "translate(-50%, -42%)",
+        transform: "translate(-50%, -48%)",
         pointerEvents: "none",
       }} />
 
@@ -122,7 +122,7 @@ function NavItem({ icon, label, isActive, onClick }) {
         style={{
           ...st.label,
           fontWeight: isActive ? 700 : 500,
-          color:      isActive ? "#1a2d5a" : "#b0b8c9",
+          color:      isActive ? "#1e4b8f" : "#9ca3af",
         }}
       >
         {label}
@@ -202,16 +202,15 @@ const st = {
     bottom: 0,
     left: 0,
     right: 0,
-    height: 68,
+    height: 60,
     paddingBottom: "env(safe-area-inset-bottom, 0px)",
     background: "#ffffff",
     display: "flex",
     justifyContent: "space-around",
     alignItems: "center",
     zIndex: 9999,
-    borderTopLeftRadius: 22,
-    borderTopRightRadius: 22,
-    boxShadow: "0 -6px 28px rgba(0,0,0,0.09)",
+    borderTop: "1px solid #ebebeb",
+    boxShadow: "0 -2px 10px rgba(0,0,0,0.05)",
     transition: "transform .35s cubic-bezier(.4,0,.2,1)",
     fontFamily: "'Barlow', system-ui, sans-serif",
   },
@@ -222,30 +221,31 @@ const st = {
     alignItems: "center",
     background: "none",
     border: "none",
-    gap: 3,
+    gap: 2,
     cursor: "pointer",
-    padding: "4px 10px 6px",
+    padding: "6px 10px 4px",
     position: "relative",
     transition: "color .2s",
     WebkitTapHighlightColor: "transparent",
+    minWidth: 48,
   },
 
-  /* Barra indicadora en la parte superior del item activo */
+  /* Indicador activo: línea amarilla abajo del label */
   activeBar: {
     position: "absolute",
-    top: 0,
+    bottom: 0,
     left: "50%",
     transform: "translateX(-50%) scaleX(1)",
-    width: 28,
-    height: 3,
-    borderRadius: "0 0 3px 3px",
-    background: "#FFD200",
+    width: 22,
+    height: 2.5,
+    borderRadius: "2px 2px 0 0",
+    background: "#facc15",
     transition: "opacity .2s, transform .25s cubic-bezier(.34,1.56,.64,1)",
     transformOrigin: "center",
   },
 
   label: {
-    fontSize: 10.5,
+    fontSize: 10,
     lineHeight: "12px",
     letterSpacing: "0.01em",
     transition: "color .2s, font-weight .2s",

@@ -202,122 +202,129 @@ export default function Home({ user, openLogin }) {
       ══════════════════════════════ */}
       <div style={st.topArea}>
 
-        {/* ── Header: menú · logo · avatar ── */}
-        <header style={st.header}>
-          <Menu
-            size={22}
-            color="#fff"
-            style={{ position: "absolute", left: 18, cursor: "pointer" }}
-            onClick={() => setShowMenu(true)}
-          />
+        {/* ── Tira azul: menú · logo · avatar + buscador ── */}
+        <div style={st.headerStrip}>
 
-          <img
-            src="/logo-yonkers.png"
-            alt="Yonkers"
-            style={st.logo}
-          />
-
-          {!user ? (
-            <button onClick={openLogin} style={st.loginBtn} type="button">
-              Login
-            </button>
-          ) : (
-            <div style={st.avatar}>
-              {user.email?.charAt(0).toUpperCase()}
-            </div>
-          )}
-        </header>
-
-        {/* ── Buscador ── */}
-        <div style={st.searchRow}>
-          <div style={st.searchBar}>
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none"
-              stroke="rgba(26,45,90,0.55)" strokeWidth="2.5" style={{ flexShrink: 0 }}>
-              <circle cx="11" cy="11" r="8"/>
-              <path d="m21 21-4.35-4.35"/>
-            </svg>
-
-            <input
-              placeholder="Buscar pieza"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              style={st.input}
-              autoComplete="off"
-              spellCheck={false}
+          <header style={st.header}>
+            <Menu
+              size={22}
+              color="#fff"
+              style={{ position: "absolute", left: 18, cursor: "pointer" }}
+              onClick={() => setShowMenu(true)}
             />
 
-            {query.length > 0 && (
+            <img
+              src="/logo-yonkers.png"
+              alt="Yonkers"
+              style={st.logo}
+            />
+
+            {!user ? (
+              <button onClick={openLogin} style={st.loginBtn} type="button">
+                Login
+              </button>
+            ) : (
+              <div style={st.avatar}>
+                {user.email?.charAt(0).toUpperCase()}
+              </div>
+            )}
+          </header>
+
+          {/* ── Buscador ── */}
+          <div style={st.searchRow}>
+            <div style={st.searchBar}>
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none"
+                stroke="#facc15" strokeWidth="2.5" style={{ flexShrink: 0 }}>
+                <circle cx="11" cy="11" r="8"/>
+                <path d="m21 21-4.35-4.35"/>
+              </svg>
+
+              <input
+                placeholder="Buscar pieza"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                style={st.input}
+                autoComplete="off"
+                spellCheck={false}
+              />
+
+              {query.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setQuery("")}
+                  style={st.clearBtn}
+                  aria-label="Limpiar"
+                >
+                  <X size={14} color="rgba(26,45,90,0.5)" strokeWidth={2.5} />
+                </button>
+              )}
+
+              <span style={st.country}>HN</span>
+            </div>
+
+            {/* Botón voz */}
+            {voiceSupported && (
               <button
+                style={{
+                  ...st.camBtn,
+                  background: listening ? "#ef4444" : "#1e4b8f",
+                  transition: "background 0.2s",
+                }}
                 type="button"
-                onClick={() => setQuery("")}
-                style={st.clearBtn}
-                aria-label="Limpiar"
+                aria-label={listening ? "Detener voz" : "Buscar por voz"}
+                onClick={listening ? stopListening : startListening}
               >
-                <X size={14} color="rgba(26,45,90,0.5)" strokeWidth={2.5} />
+                <Mic size={18} color="#fff" strokeWidth={1.8} />
               </button>
             )}
 
-            <span style={st.country}>HN</span>
+            {/* Botón cámara */}
+            <button
+              style={st.camBtn}
+              type="button"
+              aria-label="Buscar por foto"
+              onClick={() => setShowPhotoModal(true)}
+            >
+              <Camera size={18} color="#fff" strokeWidth={1.8} />
+            </button>
           </div>
 
-          {/* Botón voz */}
-          {voiceSupported && (
+        </div>{/* fin headerStrip */}
+
+        {/* ── Tira blanca: chips de categoría + favoritos ── */}
+        <div style={st.chipsStrip}>
+          <div style={st.chipsRow}>
+            {/* Chip favoritos */}
             <button
-              style={{
-                ...st.camBtn,
-                background: listening ? "rgba(239,68,68,0.85)" : "rgba(255,255,255,.15)",
-                border: listening ? "1.5px solid rgba(239,68,68,0.9)" : "1.5px solid rgba(255,255,255,.55)",
-                transition: "background 0.2s, border 0.2s",
-              }}
-              type="button"
-              aria-label={listening ? "Detener voz" : "Buscar por voz"}
-              onClick={listening ? stopListening : startListening}
-            >
-              <Mic size={18} color="#fff" strokeWidth={1.8} />
-            </button>
-          )}
-
-          {/* Botón cámara — buscar por foto */}
-          <button
-            style={st.camBtn}
-            type="button"
-            aria-label="Buscar por foto"
-            onClick={() => setShowPhotoModal(true)}
-          >
-            <Camera size={18} color="#fff" strokeWidth={1.8} />
-          </button>
-
-        </div>
-
-        {/* ── Chips de categoría + favoritos ── */}
-        <div style={st.chipsRow}>
-          {/* Chip favoritos */}
-          <button
-            key="favs"
-            type="button"
-            style={{
-              ...st.chip,
-              ...(showFavs ? st.chipFav : st.chipOff),
-            }}
-            onClick={() => setShowFavs(!showFavs)}
-          >
-            <Heart size={11} style={{ display: "inline", marginRight: 4 }} fill={showFavs ? "#fff" : "none"} />
-            Favoritos {favorites.length > 0 && `(${favorites.length})`}
-          </button>
-
-          {CATEGORIES.map(({ id, label }) => (
-            <button
-              key={id}
+              key="favs"
               type="button"
               style={{
                 ...st.chip,
-                ...(activeCategory === id && !showFavs ? st.chipOn : st.chipOff),
+                ...(showFavs ? st.chipFav : st.chipOff),
               }}
-              onClick={() => { setActiveCategory(id); setShowFavs(false); }}
+              onClick={() => setShowFavs(!showFavs)}
             >
-              {label}
+              <Heart size={11} style={{ display: "inline", marginRight: 4 }}
+                fill={showFavs ? "#1e4b8f" : "none"}
+                stroke={showFavs ? "#1e4b8f" : "#6b7280"}
+              />
+              Favoritos {favorites.length > 0 && `(${favorites.length})`}
             </button>
-          ))}
+
+            {CATEGORIES.map(({ id, label }) => (
+              <button
+                key={id}
+                type="button"
+                style={{
+                  ...st.chip,
+                  ...(activeCategory === id && !showFavs ? st.chipOn : st.chipOff),
+                }}
+                onClick={() => { setActiveCategory(id); setShowFavs(false); }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
 
       </div>
@@ -646,9 +653,14 @@ const st = {
     left: 0,
     right: 0,
     zIndex: 9999,
-    background: "linear-gradient(180deg,#1e4b8f,#0f3e82)",
+    background: "#fff",
+    boxShadow: "0 2px 8px rgba(0,0,0,0.09)",
+  },
+
+  // Tira azul que contiene el logo
+  headerStrip: {
+    background: "#1e4b8f",
     paddingBottom: 10,
-    boxShadow: "0 4px 14px rgba(0,0,0,.18)",
   },
 
   header: {
@@ -698,20 +710,20 @@ const st = {
     display: "flex",
     alignItems: "center",
     gap: 8,
-    padding: "0 14px",
+    padding: "0 12px",
     marginBottom: 8,
   },
 
   searchBar: {
     flex: 1,
     height: SEARCH_H,
-    background: "#facc15",
+    background: "#fff",
     borderRadius: 999,
     display: "flex",
     alignItems: "center",
-    padding: "0 16px",
+    padding: "0 14px",
     gap: 8,
-    boxShadow: "0 4px 16px rgba(255,210,0,0.3)",
+    border: "2px solid #facc15",
   },
 
   input: {
@@ -720,7 +732,7 @@ const st = {
     background: "transparent",
     outline: "none",
     fontSize: 14,
-    fontWeight: 600,
+    fontWeight: 500,
     color: "#1a2d5a",
     minWidth: 0,
   },
@@ -738,7 +750,7 @@ const st = {
   country: {
     fontWeight: 800,
     fontSize: 11,
-    color: "rgba(26,45,90,0.45)",
+    color: "rgba(26,45,90,0.4)",
     letterSpacing: "0.05em",
     flexShrink: 0,
   },
@@ -747,8 +759,8 @@ const st = {
     width: SEARCH_H,
     height: SEARCH_H,
     borderRadius: 999,
-    border: "1.5px solid rgba(255,255,255,.55)",
-    background: "rgba(255,255,255,.15)",
+    border: "none",
+    background: "#1e4b8f",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -772,48 +784,56 @@ const st = {
     justifyContent: "center",
   },
 
+  // Tira blanca para los chips
+  chipsStrip: {
+    background: "#fff",
+    borderBottom: "1px solid #f0f0f0",
+  },
+
   chipsRow: {
     display: "flex",
-    gap: 7,
-    padding: "0 14px",
+    gap: 0,
+    padding: "0 8px",
     overflowX: "auto",
     scrollbarWidth: "none",
     msOverflowStyle: "none",
-    paddingBottom: 2,
   },
 
   chip: {
     flexShrink: 0,
     height: CHIPS_H,
-    padding: "0 14px",
-    borderRadius: 20,
+    padding: "0 12px",
+    borderRadius: 0,
     fontSize: 12,
-    fontWeight: 700,
+    fontWeight: 600,
     cursor: "pointer",
-    border: "1.5px solid transparent",
+    border: "none",
+    borderBottom: "2.5px solid transparent",
     whiteSpace: "nowrap",
     transition: "all .15s",
     WebkitTapHighlightColor: "transparent",
     display: "flex",
     alignItems: "center",
+    background: "transparent",
   },
 
   chipOn: {
-    background: "#facc15",
-    color: "#0f3e82",
-    borderColor: "#facc15",
+    color: "#1e4b8f",
+    borderBottomColor: "#facc15",
+    fontWeight: 700,
+    background: "transparent",
   },
 
   chipOff: {
-    background: "rgba(255,255,255,0.12)",
-    color: "rgba(255,255,255,0.75)",
-    borderColor: "rgba(255,255,255,0.18)",
+    color: "#6b7280",
+    background: "transparent",
   },
 
   chipFav: {
-    background: "#facc15",
     color: "#1e4b8f",
-    borderColor: "#facc15",
+    borderBottomColor: "#facc15",
+    fontWeight: 700,
+    background: "transparent",
   },
 
   list: {
