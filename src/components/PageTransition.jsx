@@ -29,6 +29,14 @@ export default function PageTransition({ children, direction = "forward", pageKe
         el.style.transition = "opacity 220ms ease, transform 240ms cubic-bezier(0.25,0.46,0.45,0.94)";
         el.style.opacity    = "1";
         el.style.transform  = "translateX(0)";
+
+        // Limpiar transform después de animar — evita que rompa position:fixed/sticky
+        setTimeout(() => {
+          if (ref.current) {
+            ref.current.style.transform  = "";
+            ref.current.style.transition = "";
+          }
+        }, 260);
       });
     });
   }, [pageKey]);
