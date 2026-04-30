@@ -249,7 +249,7 @@ export default function RequestNeed() {
         <div style={st.pageHeaderBg} />
         <div style={st.pageHeaderContent}>
           <div style={st.pageHeaderIcon}>
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#1e4b8f" strokeWidth="2.2">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1e4b8f" strokeWidth="2.2">
               <circle cx="11" cy="11" r="8"/>
               <path d="m21 21-4.35-4.35"/>
             </svg>
@@ -480,13 +480,13 @@ const st = {
   pageHeader: {
     position: "relative",
     background: "#1e4b8f",
-    padding: "28px 20px 22px",
+    padding: "12px 16px",
     overflow: "hidden",
   },
   pageHeaderBg: {
     position: "absolute",
-    top: -30, right: -30,
-    width: 160, height: 160,
+    top: -20, right: -20,
+    width: 100, height: 100,
     borderRadius: "50%",
     background: "rgba(250,204,21,0.15)",
     pointerEvents: "none",
@@ -494,30 +494,30 @@ const st = {
   pageHeaderContent: {
     display: "flex",
     alignItems: "center",
-    gap: 14,
+    gap: 10,
     position: "relative",
   },
   pageHeaderIcon: {
-    width: 52, height: 52,
-    borderRadius: 14,
+    width: 36, height: 36,
+    borderRadius: 10,
     background: "#facc15",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     flexShrink: 0,
-    boxShadow: "0 4px 12px rgba(250,204,21,0.4)",
+    boxShadow: "0 2px 8px rgba(250,204,21,0.35)",
   },
   pageHeaderTitle: {
     margin: 0,
-    fontSize: 22,
-    fontWeight: 800,
+    fontSize: 16,
+    fontWeight: 700,
     color: "#fff",
-    letterSpacing: "-0.3px",
+    letterSpacing: "-0.2px",
   },
   pageHeaderSub: {
-    margin: "3px 0 0",
-    fontSize: 13,
-    color: "rgba(255,255,255,0.7)",
+    margin: "1px 0 0",
+    fontSize: 11,
+    color: "rgba(255,255,255,0.65)",
     fontWeight: 400,
   },
 
