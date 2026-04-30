@@ -173,7 +173,7 @@ export default function Messages() {
         <div style={s.headerInner}>
           <div style={s.headerLeft}>
             <div style={s.headerAvatar}>
-              <Bot size={22} color="#1e4b8f" strokeWidth={2.2} />
+              <Bot size={17} color="#1e4b8f" strokeWidth={2.2} />
             </div>
             <div>
               <div style={s.headerName}>Yonky IA</div>
@@ -338,60 +338,62 @@ const s = {
   header: {
     background: "linear-gradient(135deg, #0f2a5e 0%, #1e4b8f 60%, #2563eb 100%)",
     flexShrink: 0,
-    position: "relative",
+    position: "sticky",
+    top: 0,
+    zIndex: 100,
     overflow: "hidden",
-    boxShadow: "0 4px 20px rgba(30,75,143,0.35)",
+    boxShadow: "0 2px 10px rgba(30,75,143,0.3)",
   },
   headerGlow: {
     position: "absolute",
-    top: -40,
-    right: -40,
-    width: 150,
-    height: 150,
+    top: -30,
+    right: -30,
+    width: 100,
+    height: 100,
     borderRadius: "50%",
-    background: "radial-gradient(circle, rgba(250,204,21,0.25) 0%, transparent 70%)",
+    background: "radial-gradient(circle, rgba(250,204,21,0.2) 0%, transparent 70%)",
     pointerEvents: "none",
   },
   headerInner: {
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
-    padding: "14px 18px",
+    padding: "10px 14px",
     position: "relative",
     zIndex: 1,
   },
   headerLeft: {
     display: "flex",
     alignItems: "center",
-    gap: 12,
+    gap: 10,
   },
   headerAvatar: {
-    width: 46,
-    height: 46,
+    width: 36,
+    height: 36,
     borderRadius: "50%",
     background: "linear-gradient(135deg, #facc15, #f59e0b)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    boxShadow: "0 2px 10px rgba(250,204,21,0.5)",
+    boxShadow: "0 2px 8px rgba(250,204,21,0.4)",
     flexShrink: 0,
   },
   headerName: {
     color: "#fff",
-    fontWeight: 800,
-    fontSize: 16,
-    letterSpacing: "-0.3px",
+    fontWeight: 700,
+    fontSize: 14,
+    letterSpacing: "-0.2px",
   },
   headerStatus: {
     display: "flex",
     alignItems: "center",
-    gap: 5,
-    marginTop: 2,
+    gap: 4,
+    marginTop: 1,
   },
   statusDot: {
     display: "inline-block",
-    width: 7,
-    height: 7,
+    width: 6,
+    height: 6,
     borderRadius: "50%",
     background: "#4ade80",
     animation: "pulse 2s infinite",
