@@ -478,7 +478,9 @@ const st = {
 
   /* Header llamativo */
   pageHeader: {
-    position: "relative",
+    position: "sticky",
+    top: 0,
+    zIndex: 100,
     background: "#1e4b8f",
     padding: "12px 16px",
     overflow: "hidden",
