@@ -15,7 +15,6 @@ import { useFavorites } from "../hooks/useFavorites";
 import { useCart } from "../hooks/useCart";
 import { useAnalytics } from "../hooks/useAnalytics";
 import { useVoiceSearch } from "../hooks/useVoiceSearch";
-import { useRecentlyViewed } from "../hooks/useRecentlyViewed";
 import PhotoSearchModal from "../components/modals/PhotoSearchModal";
 import { supabase } from "../lib/supabase";
 
@@ -63,7 +62,6 @@ export default function Home({ user, openLogin }) {
   const { toast } = useToast();
   const { favorites, toggleFavorite, isFavorite } = useFavorites();
   const { addToCart, isInCart } = useCart();
-  const { items: recentPieces, addPiece: addToRecent } = useRecentlyViewed();
   const [showFavs,       setShowFavs]       = useState(false);
   const [showPhotoModal, setShowPhotoModal] = useState(false);
   const [showMenu,       setShowMenu]       = useState(false);
@@ -156,8 +154,7 @@ export default function Home({ user, openLogin }) {
   const handleOpenCard = useCallback((p) => {
     setSelectedPiece(p);
     setSelectedId(p.id);
-    addToRecent(p);
-  }, [addToRecent]);
+  }, []);
 
   /* ── Heart: favorito + carrito ── */
   function handleToggleFavorite(piece) {
@@ -329,38 +326,6 @@ export default function Home({ user, openLogin }) {
           CONTENIDO
       ══════════════════════════════ */}
       <div style={{ paddingTop: TOP_AREA_H }}>
-
-        {/* ── Vistas recientemente ── */}
-        {recentPieces.length > 0 && !showFavs && !query && (
-          <div style={st.recentWrap}>
-            <div style={st.recentHeader}>
-              <span style={st.recentTitle}>Vistas recientemente</span>
-            </div>
-            <div style={st.recentScroll}>
-              {recentPieces.map((p) => {
-                const imgSrc = p.images?.length
-                  ? (p.images[0].startsWith("http") ? p.images[0] : `${import.meta.env.VITE_BACKEND_URL || ""}${p.images[0]}`)
-                  : null;
-                return (
-                  <button
-                    key={p.id}
-                    style={st.recentCard}
-                    onClick={() => handleOpenCard(p)}
-                    type="button"
-                  >
-                    {imgSrc ? (
-                      <img src={imgSrc} alt={p.title} style={st.recentImg} />
-                    ) : (
-                      <div style={st.recentNoImg} />
-                    )}
-                    <div style={st.recentLabel} title={p.title}>{p.title || "Pieza"}</div>
-                    {p.brand && <div style={st.recentSub}>{p.brand}</div>}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
 
         {/* Banner favoritos vacíos */}
         {showFavs && favorites.length === 0 && (
