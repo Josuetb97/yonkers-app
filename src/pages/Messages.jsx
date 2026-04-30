@@ -300,7 +300,6 @@ export default function Messages() {
             <Send size={16} color={input.trim() && !loading ? "#fff" : "#9ca3af"} strokeWidth={2.5} />
           </button>
         </div>
-        <div style={s.inputHint}>Presiona Enter para enviar · Shift+Enter para nueva línea</div>
       </div>
 
       <style>{`
@@ -601,7 +600,7 @@ const s = {
 
   /* Input */
   inputWrap: {
-    padding: "10px 14px 10px",
+    padding: "10px 14px 0",
     background: "#fff",
     borderTop: "1px solid #e2e8f0",
     flexShrink: 0,
@@ -641,13 +640,6 @@ const s = {
     justifyContent: "center",
     transition: "all 0.2s",
     flexShrink: 0,
-  },
-  inputHint: {
-    fontSize: 10,
-    color: "#cbd5e1",
-    textAlign: "center",
-    marginTop: 6,
-    letterSpacing: "0.2px",
   },
 };
 
