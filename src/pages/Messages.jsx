@@ -328,7 +328,7 @@ const s = {
   page: {
     display: "flex",
     flexDirection: "column",
-    height: "100dvh",
+    height: "calc(100dvh - 60px)",   /* 60px = altura del BottomNav */
     background: "#f0f4f8",
     fontFamily: "'DM Sans', 'Inter', system-ui, sans-serif",
     overflow: "hidden",
@@ -601,11 +601,11 @@ const s = {
 
   /* Input */
   inputWrap: {
-    padding: "10px 14px calc(env(safe-area-inset-bottom, 0px) + 10px)",
+    padding: "10px 14px 10px",
     background: "#fff",
     borderTop: "1px solid #e2e8f0",
     flexShrink: 0,
-    boxShadow: "0 -6px 24px rgba(0,0,0,0.06)",
+    boxShadow: "0 -4px 16px rgba(0,0,0,0.05)",
   },
   inputBox: {
     display: "flex",
