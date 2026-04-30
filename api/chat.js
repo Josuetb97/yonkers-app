@@ -51,8 +51,21 @@ async function runTool(name, input) {
       .select("id, title, brand, years, yonker, city, price, condition, whatsapp, images, rating");
 
     if (input.query) {
-      const t = input.query.toLowerCase();
-      q = q.or(`title.ilike.%${t}%,brand.ilike.%${t}%,years.ilike.%${t}%,yonker.ilike.%${t}%`);
+      // Split into words so "transmisiones Honda Civic 2015" finds "transmision" in title + "2015" in years
+      const stopwords = new Set(["para","del","los","las","con","que","una","uno","los","las","por","sin"]);
+      const words = input.query.toLowerCase()
+        .split(/\s+/)
+        .filter(w => w.length > 2 && !stopwords.has(w));
+      if (words.length > 0) {
+        const conditions = words.flatMap(w => [
+          `title.ilike.%${w}%`,
+          `brand.ilike.%${w}%`,
+          `years.ilike.%${w}%`,
+          `yonker.ilike.%${w}%`,
+          `city.ilike.%${w}%`,
+        ]);
+        q = q.or(conditions.join(","));
+      }
     }
     if (input.city)      q = q.ilike("city",      `%${input.city}%`);
     if (input.condition) q = q.ilike("condition",  `%${input.condition}%`);

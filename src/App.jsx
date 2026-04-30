@@ -135,7 +135,6 @@ function AppRoutes({ tab, setTab, showBottomNav, user, loading, openLogin, cartC
         {/* MENSAJES */}
         <Route path="/messages" element={
           <MainLayout>
-            <BackHeader title="Mensajes" />
             <Messages />
             {showBottomNav && (
               <BottomNav active="mensajes" onChange={handleTabChange} />
