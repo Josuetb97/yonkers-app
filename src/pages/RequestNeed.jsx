@@ -244,6 +244,23 @@ export default function RequestNeed() {
         </div>
       )}
 
+      {/* ══ HEADER LLAMATIVO ══ */}
+      <div style={st.pageHeader}>
+        <div style={st.pageHeaderBg} />
+        <div style={st.pageHeaderContent}>
+          <div style={st.pageHeaderIcon}>
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#1e4b8f" strokeWidth="2.2">
+              <circle cx="11" cy="11" r="8"/>
+              <path d="m21 21-4.35-4.35"/>
+            </svg>
+          </div>
+          <div>
+            <h1 style={st.pageHeaderTitle}>Solicitar pieza</h1>
+            <p style={st.pageHeaderSub}>Los yonkers de Honduras te contactarán</p>
+          </div>
+        </div>
+      </div>
+
       <form onSubmit={handleSubmit}>
 
         {/* ══ BANNER DE CONFIANZA ══ */}
@@ -457,6 +474,51 @@ const st = {
     minHeight: "100vh",
     fontFamily: "system-ui, -apple-system, sans-serif",
     paddingBottom: 40,
+  },
+
+  /* Header llamativo */
+  pageHeader: {
+    position: "relative",
+    background: "#1e4b8f",
+    padding: "28px 20px 22px",
+    overflow: "hidden",
+  },
+  pageHeaderBg: {
+    position: "absolute",
+    top: -30, right: -30,
+    width: 160, height: 160,
+    borderRadius: "50%",
+    background: "rgba(250,204,21,0.15)",
+    pointerEvents: "none",
+  },
+  pageHeaderContent: {
+    display: "flex",
+    alignItems: "center",
+    gap: 14,
+    position: "relative",
+  },
+  pageHeaderIcon: {
+    width: 52, height: 52,
+    borderRadius: 14,
+    background: "#facc15",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+    boxShadow: "0 4px 12px rgba(250,204,21,0.4)",
+  },
+  pageHeaderTitle: {
+    margin: 0,
+    fontSize: 22,
+    fontWeight: 800,
+    color: "#fff",
+    letterSpacing: "-0.3px",
+  },
+  pageHeaderSub: {
+    margin: "3px 0 0",
+    fontSize: 13,
+    color: "rgba(255,255,255,0.7)",
+    fontWeight: 400,
   },
 
   /* Banner de confianza */

@@ -107,7 +107,6 @@ function AppRoutes({ tab, setTab, showBottomNav, user, loading, openLogin, cartC
         <Route path="/request" element={
           <ProtectedRoute user={user} loading={loading}>
             <MainLayout>
-              <BackHeader title="Solicitar pieza" />
               <RequestNeed user={user} />
               {bottomNav}
             </MainLayout>
