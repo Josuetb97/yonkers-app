@@ -117,7 +117,6 @@ function AppRoutes({ tab, setTab, showBottomNav, user, loading, openLogin, cartC
         <Route path="/my-pieces" element={
           <ProtectedRoute user={user} loading={loading}>
             <MainLayout>
-              <BackHeader title="Mis piezas" />
               <MyPieces user={user} />
               {bottomNav}
             </MainLayout>

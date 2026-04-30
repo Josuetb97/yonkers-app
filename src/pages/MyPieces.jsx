@@ -1,5 +1,24 @@
 import { useEffect, useMemo, useState, useRef, useCallback } from "react";
-import { Plus, Trash2, X, Search, ArrowLeft, Car, DollarSign, Eye, CheckCircle } from "lucide-react";
+import { Plus, Trash2, X, Search, Car, DollarSign, Eye, CheckCircle } from "lucide-react";
+
+/* ─── Section title (igual que Solicitar) ─── */
+function SectionTitle({ children }) {
+  return (
+    <div style={{
+      background: "#f7f8fa",
+      padding: "10px 16px",
+      fontSize: 12,
+      fontWeight: 700,
+      color: "#666",
+      letterSpacing: "0.04em",
+      textTransform: "uppercase",
+      borderTop: "1px solid #ebebeb",
+      borderBottom: "1px solid #ebebeb",
+    }}>
+      {children}
+    </div>
+  );
+}
 
 const SOLD_KEY = "yonkers_sold_pieces";
 function loadSold() {
@@ -10,7 +29,6 @@ function saveSold(set) {
   localStorage.setItem(SOLD_KEY, JSON.stringify([...set]));
 }
 import { supabase } from "../lib/supabase";
-import { useNavigate } from "react-router-dom";
 import { useCart } from "../hooks/useCart";
 import { compressImages } from "../lib/compressImage";
 
@@ -313,7 +331,6 @@ function VehicleFormModal({ onClose, onSaved }) {
    MAIN — MI AUTOLOTE
 ───────────────────────────────────────────────────────────── */
 export default function Autolote() {
-  const navigate = useNavigate();
   const { addToCart, isInCart } = useCart();
 
   const [items,    setItems]    = useState([]);
@@ -382,101 +399,139 @@ export default function Autolote() {
   return (
     <div style={pg.page}>
 
-      {/* ══ HERO HEADER ══ */}
+      {/* ══ HEADER STICKY ══ */}
       <div style={pg.hero}>
-        <button style={pg.backBtn} onClick={() => navigate(-1)}>
-          <ArrowLeft size={18} color="#fff" />
-        </button>
-        <div style={pg.heroContent}>
-          <div style={pg.heroIcon}>🚗</div>
-          <div>
-            <div style={pg.heroTitle}>Mi Autolote</div>
-            <div style={pg.heroSub}>Administra tus vehículos publicados</div>
+        <div style={pg.heroGlow} />
+        <div style={pg.heroInner}>
+          <div style={pg.heroContent}>
+            <div style={pg.heroIcon}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1e4b8f" strokeWidth="2.2">
+                <rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 5v3h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>
+              </svg>
+            </div>
+            <div>
+              <div style={pg.heroTitle}>Mi Autolote</div>
+              <div style={pg.heroSub}>Administra tus vehículos publicados</div>
+            </div>
           </div>
-        </div>
-        <button style={pg.addBtn} onClick={() => setShowForm(true)}>
-          <Plus size={16} color={BLUE} />
-        </button>
-      </div>
-
-      <div style={pg.content}>
-
-        {/* ══ KPIs ══ */}
-        {!loading && items.length > 0 && (
-          <div style={pg.kpiRow}>
-            <KpiChip icon={<Car size={16} />}       label="Publicados" value={items.length}            color={BLUE}  />
-            <KpiChip icon={<DollarSign size={16} />} label="Valor total" value={`L ${totalValue.toLocaleString()}`} color={GREEN} />
-            <KpiChip icon={<Eye size={16} />}        label="Con fotos"   value={`${withPhotos}/${items.length}`}     color="#7c3aed" />
-          </div>
-        )}
-
-        {/* ══ SEARCH + ADD ══ */}
-        <div style={pg.topBar}>
-          <div style={pg.searchWrap}>
-            <Search size={15} color="#9ca3af" />
-            <input
-              placeholder="Buscar por nombre, marca, año..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              style={pg.searchInput}
-            />
-            {search && (
-              <button style={pg.clearSearch} onClick={() => setSearch("")}>
-                <X size={13} color="#9ca3af" />
-              </button>
-            )}
-          </div>
-          <button style={pg.createBtn} onClick={() => setShowForm(true)}>
-            <Plus size={16} color="#fff" />
-            Publicar
+          <button style={pg.addBtn} onClick={() => setShowForm(true)}>
+            <Plus size={18} color={BLUE} strokeWidth={2.5} />
           </button>
         </div>
-
-        {error && <div style={pg.error}>{error}</div>}
-
-        {/* ══ GRID ══ */}
-        {loading ? (
-          <div style={pg.empty}>
-            <div style={{ fontSize: 32, marginBottom: 8 }}>⏳</div>
-            Cargando vehículos...
-          </div>
-        ) : filtered.length === 0 ? (
-          <div style={pg.empty}>
-            <div style={{ fontSize: 48, marginBottom: 12 }}>🚗</div>
-            <div style={pg.emptyTitle}>
-              {search ? "Sin resultados" : "Aún no tienes vehículos"}
-            </div>
-            <div style={pg.emptySub}>
-              {search ? "Intenta con otro término" : "Publica tu primer vehículo para que los compradores te contacten"}
-            </div>
-            {!search && (
-              <button style={pg.emptyBtn} onClick={() => setShowForm(true)}>
-                <Plus size={16} /> Publicar ahora
-              </button>
-            )}
-          </div>
-        ) : (
-          <div style={pg.list}>
-            {filtered.map((v) => (
-              <VehicleCard
-                key={v.id}
-                v={v}
-                onDelete={deleteItem}
-                onAddToCart={handleAddToCart}
-                inCart={isInCart(v.id, "vehicle")}
-              />
-            ))}
-          </div>
-        )}
-
-        {/* ══ STATS FOOTER ══ */}
-        {!loading && items.length > 0 && (
-          <div style={pg.statsFooter}>
-            <span>💡 Consejo: los vehículos con fotos reciben 3x más contactos</span>
-          </div>
-        )}
-
       </div>
+
+      {/* ══ TRUST BANNER (igual que Solicitar) ══ */}
+      <div style={pg.trustBanner}>
+        <div style={pg.trustItem}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1e4b8f" strokeWidth="2">
+            <rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 5v3h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>
+          </svg>
+          <span>Vehículos publicados</span>
+        </div>
+        <div style={pg.trustDivider} />
+        <div style={pg.trustItem}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1e4b8f" strokeWidth="2">
+            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.63 3.4 2 2 0 0 1 3.6 1.21h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.96a16 16 0 0 0 6.13 6.13l1.27-.95a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>
+          </svg>
+          <span>Contacto por WhatsApp</span>
+        </div>
+        <div style={pg.trustDivider} />
+        <div style={pg.trustItem}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1e4b8f" strokeWidth="2">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          </svg>
+          <span>100% gratis</span>
+        </div>
+      </div>
+
+      {/* ══ SECCIÓN: BUSCAR + PUBLICAR ══ */}
+      <div style={pg.section}>
+        <SectionTitle>Buscar en mi autolote</SectionTitle>
+        <div style={pg.sectionBody}>
+          <div style={pg.searchRow}>
+            <div style={pg.searchWrap}>
+              <Search size={14} color="#9ca3af" />
+              <input
+                placeholder="Nombre, marca, año..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                style={pg.searchInput}
+              />
+              {search && (
+                <button style={pg.clearSearch} onClick={() => setSearch("")}>
+                  <X size={13} color="#9ca3af" />
+                </button>
+              )}
+            </div>
+            <button style={pg.createBtn} onClick={() => setShowForm(true)}>
+              <Plus size={15} strokeWidth={2.5} />
+              Publicar
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* ══ SECCIÓN: KPIs ══ */}
+      {!loading && items.length > 0 && (
+        <div style={pg.section}>
+          <SectionTitle>Resumen del autolote</SectionTitle>
+          <div style={pg.kpiRow}>
+            <KpiChip icon={<Car size={15} />}        label="Publicados"  value={items.length}                       color={BLUE}    />
+            <KpiChip icon={<DollarSign size={15} />} label="Valor total" value={`L ${totalValue.toLocaleString()}`} color={GREEN}   />
+            <KpiChip icon={<Eye size={15} />}         label="Con fotos"   value={`${withPhotos}/${items.length}`}   color="#7c3aed" />
+          </div>
+        </div>
+      )}
+
+      {error && <div style={pg.error}>{error}</div>}
+
+      {/* ══ SECCIÓN: MIS VEHÍCULOS ══ */}
+      <div style={pg.section}>
+        <SectionTitle>
+          {loading ? "Cargando..." : search ? `Resultados · ${filtered.length}` : `Mis vehículos${items.length ? ` · ${items.length}` : ""}`}
+        </SectionTitle>
+        <div style={pg.sectionBody}>
+          {loading ? (
+            <div style={pg.empty}>
+              <div style={{ fontSize: 32, marginBottom: 8 }}>⏳</div>
+              Cargando vehículos...
+            </div>
+          ) : filtered.length === 0 ? (
+            <div style={pg.empty}>
+              <div style={{ fontSize: 48, marginBottom: 12 }}>🚗</div>
+              <div style={pg.emptyTitle}>
+                {search ? "Sin resultados" : "Aún no tienes vehículos"}
+              </div>
+              <div style={pg.emptySub}>
+                {search ? "Intenta con otro término" : "Publica tu primer vehículo para que los compradores te contacten"}
+              </div>
+              {!search && (
+                <button style={pg.emptyBtn} onClick={() => setShowForm(true)}>
+                  <Plus size={16} /> Publicar ahora
+                </button>
+              )}
+            </div>
+          ) : (
+            <div style={pg.list}>
+              {filtered.map((v) => (
+                <VehicleCard
+                  key={v.id}
+                  v={v}
+                  onDelete={deleteItem}
+                  onAddToCart={handleAddToCart}
+                  inCart={isInCart(v.id, "vehicle")}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {!loading && items.length > 0 && (
+        <div style={pg.tip}>
+          💡 Los vehículos con fotos reciben 3× más contactos
+        </div>
+      )}
 
       {/* ══ FORM MODAL ══ */}
       {showForm && (
@@ -503,23 +558,21 @@ const kpi = {
     display: "flex",
     alignItems: "center",
     gap: 10,
-    padding: "12px 14px",
-    background: "#fff",
-    borderRadius: 14,
-    flex: 1,
-    minWidth: 0,
-    border: "1px solid #f0f0f0",
+    padding: "6px 20px 6px 0",
+    flex: "0 0 auto",
+    borderRight: "1px solid #ebebeb",
+    marginRight: 20,
   },
   icon: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
+    width: 34,
+    height: 34,
+    borderRadius: 8,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     flexShrink: 0,
   },
-  value: { fontSize: 14, fontWeight: 800, color: "#111827" },
+  value: { fontSize: 15, fontWeight: 800, color: "#111827" },
   label: { fontSize: 10, color: "#9ca3af", marginTop: 1 },
 };
 
@@ -839,80 +892,113 @@ const fm = {
   },
 };
 
-/* ─── Page styles ─── */
+/* ─── Page styles (mismos tokens que Solicitar) ─── */
 const pg = {
   page: {
-    background: "#f0f4ff",
+    background: "#f7f8fa",
     minHeight: "100vh",
     paddingBottom: 80,
-    fontFamily: "'DM Sans', system-ui, sans-serif",
+    fontFamily: "system-ui, -apple-system, sans-serif",
   },
+
+  /* ── Header sticky ── */
   hero: {
-    background: `linear-gradient(135deg, ${BLUE}, ${BLUEM})`,
-    padding: "18px 16px 20px",
+    position: "sticky",
+    top: 0,
+    zIndex: 100,
+    background: "#1e4b8f",
+    padding: "12px 16px",
+    overflow: "hidden",
+  },
+  heroGlow: {
+    position: "absolute",
+    top: -20, right: -20,
+    width: 100, height: 100,
+    borderRadius: "50%",
+    background: "rgba(250,204,21,0.15)",
+    pointerEvents: "none",
+  },
+  heroInner: {
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
     gap: 12,
-    boxShadow: "0 4px 20px rgba(30,58,138,0.25)",
-  },
-  backBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: "50%",
-    background: "rgba(255,255,255,0.2)",
-    border: "none",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    cursor: "pointer",
-    flexShrink: 0,
+    position: "relative",
   },
   heroContent: {
     display: "flex",
     alignItems: "center",
-    gap: 12,
+    gap: 10,
     flex: 1,
   },
   heroIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 13,
-    background: YELL,
+    width: 36, height: 36,
+    borderRadius: 10,
+    background: "#facc15",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    fontSize: 22,
     flexShrink: 0,
-    boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+    boxShadow: "0 2px 8px rgba(250,204,21,0.35)",
   },
-  heroTitle: { fontSize: 19, fontWeight: 800, color: "#fff" },
-  heroSub:   { fontSize: 12, color: "rgba(255,255,255,0.7)", marginTop: 1 },
+  heroTitle: { margin: 0, fontSize: 16, fontWeight: 700, color: "#fff", letterSpacing: "-0.2px" },
+  heroSub:   { margin: "1px 0 0", fontSize: 11, color: "rgba(255,255,255,0.65)" },
   addBtn: {
-    width: 36,
-    height: 36,
+    width: 34, height: 34,
     borderRadius: "50%",
-    background: YELL,
+    background: "#facc15",
     border: "none",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     cursor: "pointer",
     flexShrink: 0,
-    boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+    boxShadow: "0 2px 8px rgba(250,204,21,0.4)",
   },
-  content: {
-    padding: "16px 14px",
+
+  /* ── Trust banner (idéntico a Solicitar) ── */
+  trustBanner: {
+    background: "#fff",
+    borderBottom: "1px solid #ebebeb",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-around",
+    padding: "12px 16px",
+    gap: 4,
+  },
+  trustItem: {
     display: "flex",
     flexDirection: "column",
-    gap: 14,
+    alignItems: "center",
+    gap: 4,
+    flex: 1,
+    fontSize: 10,
+    fontWeight: 600,
+    color: "#374151",
+    textAlign: "center",
+    lineHeight: 1.3,
   },
-  kpiRow: {
+  trustDivider: {
+    width: 1,
+    height: 32,
+    background: "#ebebeb",
+    flexShrink: 0,
+  },
+
+  /* ── Secciones (idéntico a Solicitar) ── */
+  section: {
+    background: "#fff",
+    marginBottom: 8,
+  },
+  sectionBody: {
+    padding: "14px 16px",
     display: "flex",
-    gap: 10,
-    overflowX: "auto",
+    flexDirection: "column",
+    gap: 12,
   },
-  topBar: {
+
+  /* ── Búsqueda dentro de sección ── */
+  searchRow: {
     display: "flex",
     gap: 10,
     alignItems: "center",
@@ -922,18 +1008,18 @@ const pg = {
     display: "flex",
     alignItems: "center",
     gap: 8,
-    background: "#fff",
-    border: "1.5px solid #e5e7eb",
-    borderRadius: 14,
+    height: 42,
     padding: "0 12px",
-    height: 44,
+    border: "1px solid #d9d9d9",
+    borderRadius: 6,
+    background: "#fff",
   },
   searchInput: {
     flex: 1,
     border: "none",
     outline: "none",
     fontSize: 14,
-    color: "#111827",
+    color: "#111",
     background: "transparent",
     fontFamily: "system-ui, sans-serif",
   },
@@ -946,54 +1032,92 @@ const pg = {
     alignItems: "center",
   },
   createBtn: {
-    height: 44,
+    height: 42,
     padding: "0 16px",
-    borderRadius: 13,
+    borderRadius: 6,
     border: "none",
-    background: `linear-gradient(135deg, ${BLUE}, ${BLUEM})`,
-    color: "#fff",
+    background: "#facc15",
+    color: "#1e3a8a",
     fontSize: 13,
     fontWeight: 700,
     cursor: "pointer",
     display: "flex",
     alignItems: "center",
-    gap: 6,
-    fontFamily: "system-ui, sans-serif",
+    gap: 5,
     flexShrink: 0,
-    boxShadow: "0 3px 10px rgba(30,58,138,0.25)",
   },
+
+  /* ── KPIs dentro de sección ── */
+  kpiRow: {
+    display: "flex",
+    gap: 0,
+    overflowX: "auto",
+    padding: "10px 16px",
+  },
+
+  /* ── Error ── */
+  error: {
+    background: "#fef2f2",
+    border: "1px solid #fca5a5",
+    borderRadius: 8,
+    padding: "12px 16px",
+    color: "#dc2626",
+    fontSize: 13,
+    fontWeight: 600,
+    margin: "0 0 8px",
+  },
+
+  /* ── Lista ── */
   list: {
     display: "flex",
     flexDirection: "column",
     gap: 10,
   },
-  error: {
-    background: "#fef2f2",
-    border: "1px solid #fca5a5",
-    borderRadius: 12,
-    padding: "12px 16px",
-    color: "#dc2626",
-    fontSize: 13,
-    fontWeight: 600,
-  },
+
+  /* ── Empty state ── */
   empty: {
     textAlign: "center",
-    padding: "48px 24px",
+    padding: "40px 24px",
     color: "#9ca3af",
   },
-  emptyIcon: { fontSize: 40, marginBottom: 10 },
-  emptyTitle: { fontSize: 16, fontWeight: 700, color: "#374151", margin: "0 0 4px" },
-  emptyText:  { fontSize: 13, margin: 0 },
-  soldBadge: {
-    position: "absolute",
-    top: 6,
-    left: 6,
-    background: "#fee2e2",
-    color: "#dc2626",
-    fontSize: 9,
-    fontWeight: 700,
-    padding: "2px 7px",
+  emptyTitle: { fontSize: 16, fontWeight: 700, color: "#374151", margin: "0 0 6px" },
+  emptySub:   { fontSize: 13, color: "#9ca3af", margin: "0 0 18px" },
+  emptyBtn: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 6,
+    padding: "10px 22px",
     borderRadius: 6,
-    letterSpacing: "0.03em",
+    border: "none",
+    background: "#facc15",
+    color: "#1e3a8a",
+    fontWeight: 700,
+    fontSize: 14,
+    cursor: "pointer",
+  },
+
+  /* ── Tip footer ── */
+  tip: {
+    textAlign: "center",
+    fontSize: 12,
+    color: "#9ca3af",
+    padding: "16px 16px 4px",
+  },
+
+  /* ── Toast ── */
+  toast: {
+    position: "fixed",
+    bottom: 80,
+    left: "50%",
+    transform: "translateX(-50%)",
+    background: "#1e3a8a",
+    color: "#fff",
+    padding: "10px 20px",
+    borderRadius: 20,
+    fontSize: 13,
+    fontWeight: 600,
+    zIndex: 9999,
+    whiteSpace: "nowrap",
+    boxShadow: "0 4px 20px rgba(0,0,0,0.25)",
   },
 };
