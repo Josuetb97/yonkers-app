@@ -25,7 +25,7 @@ const styles = {
     minHeight: "100dvh",
     background: "#F3F4F6",
     position: "relative",
-    overflowX: "hidden",        // 🔥 elimina scroll lateral
+    overflowX: "clip",          // 🔥 elimina scroll lateral sin romper sticky/fixed
     display: "flex",
     flexDirection: "column",
   },

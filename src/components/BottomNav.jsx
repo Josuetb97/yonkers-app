@@ -251,4 +251,29 @@ const st = {
     transition: "color .2s, font-weight .2s",
     fontFamily: "'Barlow', system-ui, sans-serif",
   },
+
+  centerBtn: {
+    position:        "relative",
+    width:           62,
+    height:          62,
+    borderRadius:    "50%",
+    background:      "linear-gradient(135deg, #FFD200 0%, #f5c400 100%)",
+    border:          "none",
+    cursor:          "pointer",
+    display:         "flex",
+    alignItems:      "center",
+    justifyContent:  "center",
+    transform:       "translateY(-22px)",
+    transition:      "transform .25s cubic-bezier(.34,1.56,.64,1), box-shadow .2s",
+    WebkitTapHighlightColor: "transparent",
+    flexShrink:      0,
+  },
+
+  centerRing: {
+    position:     "absolute",
+    inset:        -5,
+    borderRadius: "50%",
+    border:       "2.5px solid rgba(255,210,0,0.35)",
+    pointerEvents:"none",
+  },
 };
