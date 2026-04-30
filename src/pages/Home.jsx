@@ -33,10 +33,10 @@ const CATEGORIES = [
 const CONDITIONS = ["Todos", "Usado", "Buen estado", "Como nuevo", "Nuevo"];
 
 /* ── Alturas fijas ── */
-const HEADER_H   = 68;
-const SEARCH_H   = 50;
-const CHIPS_H    = 34;
-const TOP_AREA_H = HEADER_H + SEARCH_H + CHIPS_H + 36;
+const HEADER_H   = 48;
+const SEARCH_H   = 42;
+const CHIPS_H    = 32;
+const TOP_AREA_H = HEADER_H + SEARCH_H + CHIPS_H + 28;
 
 const EMPTY_FILTERS = {
   condition: "",
@@ -274,7 +274,7 @@ export default function Home({ user, openLogin }) {
                 aria-label={listening ? "Detener voz" : "Buscar por voz"}
                 onClick={listening ? stopListening : startListening}
               >
-                <Mic size={18} color="#fff" strokeWidth={1.8} />
+                <Mic size={16} color="#fff" strokeWidth={1.8} />
               </button>
             )}
 
@@ -285,7 +285,7 @@ export default function Home({ user, openLogin }) {
               aria-label="Buscar por foto"
               onClick={() => setShowPhotoModal(true)}
             >
-              <Camera size={18} color="#fff" strokeWidth={1.8} />
+              <Camera size={16} color="#fff" strokeWidth={1.8} />
             </button>
           </div>
 
@@ -660,7 +660,7 @@ const st = {
   // Tira azul que contiene el logo
   headerStrip: {
     background: "#1e4b8f",
-    paddingBottom: 10,
+    paddingBottom: 8,
   },
 
   header: {
@@ -672,46 +672,46 @@ const st = {
   },
 
   logo: {
-    height: 120,
+    height: 72,
     objectFit: "contain",
-    filter: "drop-shadow(0 2px 4px rgba(0,0,0,.25))",
+    filter: "drop-shadow(0 1px 3px rgba(0,0,0,.2))",
     pointerEvents: "none",
   },
 
   loginBtn: {
     position: "absolute",
-    right: 18,
+    right: 14,
     background: "#facc15",
     border: "none",
-    padding: "6px 14px",
+    padding: "5px 12px",
     borderRadius: 20,
     fontWeight: 700,
-    fontSize: 13,
+    fontSize: 12,
     cursor: "pointer",
     color: "#111",
   },
 
   avatar: {
     position: "absolute",
-    right: 18,
-    width: 36,
-    height: 36,
+    right: 14,
+    width: 30,
+    height: 30,
     borderRadius: "50%",
     background: "#facc15",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     fontWeight: 700,
-    fontSize: 15,
+    fontSize: 13,
     color: "#111",
   },
 
   searchRow: {
     display: "flex",
     alignItems: "center",
-    gap: 8,
-    padding: "0 12px",
-    marginBottom: 8,
+    gap: 7,
+    padding: "0 10px",
+    marginBottom: 6,
   },
 
   searchBar: {
@@ -760,7 +760,7 @@ const st = {
     height: SEARCH_H,
     borderRadius: 999,
     border: "none",
-    background: "#1e4b8f",
+    background: "rgba(255,255,255,0.18)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
