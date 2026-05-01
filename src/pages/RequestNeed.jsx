@@ -348,22 +348,6 @@ export default function RequestNeed() {
               />
             </div>
 
-            {/* Descripción */}
-            <div style={st.field}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-                <label style={st.label}>Detalles adicionales</label>
-                <span style={{ fontSize: 11, color: "#bbb" }}>{charLeft} restantes</span>
-              </div>
-              <textarea
-                className="rn-input"
-                name="description"
-                value={form.description}
-                onChange={handleChange}
-                placeholder="Estado que busca, color, número de parte..."
-                maxLength={300}
-                style={{ ...st.input, height: 80, resize: "vertical", paddingTop: 10, paddingBottom: 10 }}
-              />
-            </div>
 
           </div>
         </div>
