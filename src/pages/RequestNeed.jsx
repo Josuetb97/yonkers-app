@@ -122,6 +122,22 @@ export default function RequestNeed() {
 
       if (insertError) throw insertError;
 
+      // Notificar a todos los yonkers activos por WhatsApp
+      try {
+        await fetch("https://tgmpsjfoughrueqjwwpg.supabase.co/functions/v1/notify-yonkers", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title: form.title.trim(),
+            brand: form.brand?.trim() || "",
+            city:  form.city?.trim()  || "",
+            whatsapp: form.whatsapp.trim(),
+          }),
+        });
+      } catch (notifyErr) {
+        console.warn("No se pudo notificar yonkers:", notifyErr);
+      }
+
       const shareFiles = (compressed.length > 0 ? compressed : filesToUpload).filter(
         (f) => f instanceof File
       );
@@ -661,3 +677,4 @@ const st = {
     lineHeight: 1.5,
   },
 };
+                                                                                                                                                                                                   
