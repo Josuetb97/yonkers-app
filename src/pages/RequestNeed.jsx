@@ -353,15 +353,34 @@ export default function RequestNeed() {
 
             {/* Ciudad */}
             <div style={st.field}>
-              <label style={st.label}>Ciudad</label>
-              <input
+              <label style={st.label}>Ciudad / Departamento</label>
+              <select
                 className="rn-input"
                 name="city"
                 value={form.city}
                 onChange={handleChange}
-                placeholder="Ej: Tegucigalpa, San Pedro Sula..."
-                style={st.input}
-              />
+                style={{ ...st.input, backgroundColor: "#fff", cursor: "pointer" }}
+              >
+                <option value="">Selecciona tu ciudad...</option>
+                <option value="Atlántida">Atlántida</option>
+                <option value="Choluteca">Choluteca</option>
+                <option value="Colón">Colón</option>
+                <option value="Comayagua">Comayagua</option>
+                <option value="Copán">Copán</option>
+                <option value="Cortés">Cortés</option>
+                <option value="El Paraíso">El Paraíso</option>
+                <option value="Francisco Morazán">Francisco Morazán</option>
+                <option value="Gracias a Dios">Gracias a Dios</option>
+                <option value="Intibucá">Intibucá</option>
+                <option value="Islas de la Bahía">Islas de la Bahía</option>
+                <option value="La Paz">La Paz</option>
+                <option value="Lempira">Lempira</option>
+                <option value="Ocotepeque">Ocotepeque</option>
+                <option value="Olancho">Olancho</option>
+                <option value="Santa Bárbara">Santa Bárbara</option>
+                <option value="Valle">Valle</option>
+                <option value="Yoro">Yoro</option>
+              </select>
             </div>
 
 
@@ -677,4 +696,3 @@ const st = {
     lineHeight: 1.5,
   },
 };
-                                                                                                                                                                                                   
