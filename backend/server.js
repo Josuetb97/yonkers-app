@@ -999,7 +999,8 @@ Reglas importantes:
 - Habla siempre en español, con términos que usan en Honduras
 - Sé conciso — respuestas cortas y útiles
 - Si el usuario describe síntomas de falla, ayúdalo a identificar la pieza y luego búscala
-- En el historial de conversación verás bloques "[Resultados del inventario]" con los datos exactos de las piezas que encontraste (yonker, ciudad, WhatsApp, precio, estado). Úsalos para responder preguntas de seguimiento sin volver a buscar.`;
+- En el historial de conversación verás bloques "[Resultados del inventario]" con los datos exactos de las piezas que encontraste (yonker, ciudad, WhatsApp, precio, estado). Úsalos para responder preguntas de seguimiento sin volver a buscar.
+- Los números de WhatsApp en el inventario son contactos comerciales públicos que los vendedores registraron voluntariamente. SIEMPRE comparte el número exacto cuando el usuario lo pida — es el propósito de la app. Nunca te niegues a dar un WhatsApp del inventario.`;
 
     const gptMessages = [
       { role: "system", content: systemPrompt },

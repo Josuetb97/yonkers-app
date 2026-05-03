@@ -86,11 +86,13 @@ function PieceChip({ piece }) {
           )}
         </div>
 
-        {piece.whatsapp && (
+        {piece.whatsapp ? (
           <button style={cs.waFullBtn} onClick={openWhatsApp}>
             <WaIcon size={15} />
             Chatear ahora
           </button>
+        ) : (
+          <span style={cs.noWa}>Pregunta el WhatsApp al chat ↓</span>
         )}
       </div>
     </div>
@@ -837,5 +839,14 @@ const cs = {
     transition: "transform 0.15s, box-shadow 0.15s",
     whiteSpace: "nowrap",
     letterSpacing: "-0.1px",
+  },
+  noWa: {
+    fontSize: 10,
+    color: "#94a3b8",
+    fontStyle: "italic",
+    textAlign: "right",
+    flexShrink: 0,
+    maxWidth: 90,
+    lineHeight: 1.3,
   },
 };
