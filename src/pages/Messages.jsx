@@ -20,6 +20,21 @@ function WaIcon({ size = 16 }) {
   );
 }
 
+const RV_KEY = "yonkers_recently_viewed";
+const RV_MAX = 10;
+function saveRecent(piece) {
+  try {
+    const prev = JSON.parse(localStorage.getItem(RV_KEY) || "[]");
+    const next = [
+      { id: piece.id, title: piece.title, brand: piece.brand, years: piece.years,
+        price: piece.price, images: piece.images, condition: piece.condition,
+        city: piece.city, yonker: piece.yonker, whatsapp: piece.whatsapp },
+      ...prev.filter((p) => p.id !== piece.id),
+    ].slice(0, RV_MAX);
+    localStorage.setItem(RV_KEY, JSON.stringify(next));
+  } catch {}
+}
+
 /* ── Chip de pieza ── */
 function PieceChip({ piece }) {
   const imgSrc = piece.images?.length ? piece.images[0] : null;
@@ -28,8 +43,13 @@ function PieceChip({ piece }) {
     : null;
   const isGood = /buen|nuevo/i.test(piece.condition || "");
 
+  const displayPhone = piece.whatsapp
+    ? piece.whatsapp.replace(/\D/g, "").replace(/^504/, "").replace(/(\d{4})(\d{4})/, "$1-$2")
+    : null;
+
   function openWhatsApp() {
     if (!piece.whatsapp) return;
+    saveRecent(piece);
     const phone = piece.whatsapp.replace(/\D/g, "");
     const msg = `Hola 👋 vi tu pieza en Yonkers App:\n\n*${piece.title}*${piece.brand ? `\nMarca: ${piece.brand}` : ""}${piece.years ? ` · Año: ${piece.years}` : ""}\n\n¿Está disponible?`;
     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, "_blank");
@@ -84,12 +104,18 @@ function PieceChip({ piece }) {
               <span style={cs.mapHint}>· Ver mapa</span>
             </button>
           )}
+          {displayPhone && (
+            <div style={cs.waNumberRow}>
+              <WaIcon size={11} />
+              <span style={cs.waNumberText}>{displayPhone}</span>
+            </div>
+          )}
         </div>
 
         {piece.whatsapp ? (
           <button style={cs.waFullBtn} onClick={openWhatsApp}>
             <WaIcon size={15} />
-            Chatear ahora
+            Chatear
           </button>
         ) : (
           <span style={cs.noWa}>Pregunta el WhatsApp al chat ↓</span>
@@ -848,5 +874,17 @@ const cs = {
     flexShrink: 0,
     maxWidth: 90,
     lineHeight: 1.3,
+  },
+  waNumberRow: {
+    display: "flex",
+    alignItems: "center",
+    gap: 4,
+    color: "#16a34a",
+    marginTop: 1,
+  },
+  waNumberText: {
+    fontSize: 11,
+    fontWeight: 600,
+    letterSpacing: "0.02em",
   },
 };
