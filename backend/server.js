@@ -936,35 +936,46 @@ async function runTool(name, input) {
     if (input.query) {
       params.push(`%${input.query.toLowerCase()}%`);
       const i = params.length;
-      conditions.push(`(LOWER(title) LIKE $${i} OR LOWER(brand) LIKE $${i} OR LOWER(years) LIKE $${i} OR LOWER(yonker) LIKE $${i})`);
+      conditions.push(`(LOWER(p.title) LIKE $${i} OR LOWER(p.brand) LIKE $${i} OR LOWER(p.years) LIKE $${i} OR LOWER(p.yonker) LIKE $${i})`);
     }
     if (input.city) {
       params.push(`%${input.city.toLowerCase()}%`);
-      conditions.push(`LOWER(city) LIKE $${params.length}`);
+      conditions.push(`LOWER(p.city) LIKE $${params.length}`);
     }
     if (input.condition) {
       params.push(`%${input.condition.toLowerCase()}%`);
-      conditions.push(`LOWER(condition) LIKE $${params.length}`);
+      conditions.push(`LOWER(p.condition) LIKE $${params.length}`);
     }
     if (input.min_price != null) {
       params.push(input.min_price);
-      conditions.push(`price >= $${params.length}`);
+      conditions.push(`p.price >= $${params.length}`);
     }
     if (input.max_price != null) {
       params.push(input.max_price);
-      conditions.push(`price <= $${params.length}`);
+      conditions.push(`p.price <= $${params.length}`);
     }
 
-    let sql = "SELECT id, title, brand, years, yonker, city, price, condition, whatsapp, images, rating FROM pieces";
+    let sql = `
+      SELECT p.id, p.title, p.brand, p.years, p.yonker, p.city, p.price, p.condition,
+             COALESCE(NULLIF(p.whatsapp, ''), y.whatsapp) AS whatsapp,
+             p.images, p.rating
+      FROM pieces p
+      LEFT JOIN yonkers y ON LOWER(y.name) = LOWER(p.yonker)
+    `;
     if (conditions.length) sql += " WHERE " + conditions.join(" AND ");
-    sql += " ORDER BY created_at DESC LIMIT 6";
+    sql += " ORDER BY p.created_at DESC LIMIT 6";
 
     const { rows } = await pool.query(sql, params);
     return rows;
   }
 
   if (name === "obtener_detalle_pieza") {
-    const { rows } = await pool.query("SELECT * FROM pieces WHERE id = $1", [input.id]);
+    const { rows } = await pool.query(`
+      SELECT p.*, COALESCE(NULLIF(p.whatsapp, ''), y.whatsapp) AS whatsapp
+      FROM pieces p
+      LEFT JOIN yonkers y ON LOWER(y.name) = LOWER(p.yonker)
+      WHERE p.id = $1
+    `, [input.id]);
     return rows[0] || null;
   }
 
