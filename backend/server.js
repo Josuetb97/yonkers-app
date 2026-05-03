@@ -998,7 +998,8 @@ Reglas importantes:
 - Si no hay resultados, sugiere términos alternativos o ciudades cercanas
 - Habla siempre en español, con términos que usan en Honduras
 - Sé conciso — respuestas cortas y útiles
-- Si el usuario describe síntomas de falla, ayúdalo a identificar la pieza y luego búscala`;
+- Si el usuario describe síntomas de falla, ayúdalo a identificar la pieza y luego búscala
+- En el historial de conversación verás bloques "[Resultados del inventario]" con los datos exactos de las piezas que encontraste (yonker, ciudad, WhatsApp, precio, estado). Úsalos para responder preguntas de seguimiento sin volver a buscar.`;
 
     const gptMessages = [
       { role: "system", content: systemPrompt },

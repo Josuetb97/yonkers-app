@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Send, Bot, User, Sparkles, ChevronRight } from "lucide-react";
+import { Send, Bot, User, Sparkles, ChevronRight, MapPin, Store } from "lucide-react";
 
 const API = import.meta.env.VITE_API_URL || "/api";
 
@@ -11,51 +11,88 @@ const SUGGESTIONS = [
   { emoji: "🚗", text: "Suspensión para camioneta Ford" },
 ];
 
+/* ── SVG WhatsApp icon ── */
+function WaIcon({ size = 16 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
+      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+    </svg>
+  );
+}
+
 /* ── Chip de pieza ── */
 function PieceChip({ piece }) {
   const imgSrc = piece.images?.length ? piece.images[0] : null;
   const priceText = piece.price
     ? `L ${Number(piece.price).toLocaleString("es-HN")}`
     : null;
+  const isGood = /buen|nuevo/i.test(piece.condition || "");
 
   function openWhatsApp() {
     if (!piece.whatsapp) return;
     const phone = piece.whatsapp.replace(/\D/g, "");
-    const msg = `Hola 👋 vi tu pieza en Yonkers:\n\n*${piece.title}*\n${piece.brand} ${piece.years}`;
+    const msg = `Hola 👋 vi tu pieza en Yonkers App:\n\n*${piece.title}*${piece.brand ? `\nMarca: ${piece.brand}` : ""}${piece.years ? ` · Año: ${piece.years}` : ""}\n\n¿Está disponible?`;
     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, "_blank");
   }
 
-  const isGood = /buen|nuevo/i.test(piece.condition || "");
+  function openMap() {
+    if (!piece.city) return;
+    window.open(`https://maps.google.com?q=${encodeURIComponent(piece.city + ", Honduras")}`, "_blank");
+  }
 
   return (
-    <div style={cs.chip}>
-      <div style={cs.imgWrap}>
-        {imgSrc ? (
-          <img src={imgSrc} alt={piece.title} style={cs.img} />
-        ) : (
-          <div style={cs.noImg}>🔩</div>
-        )}
-      </div>
-      <div style={cs.info}>
-        <div style={cs.title}>{piece.title}</div>
-        <div style={cs.sub}>{[piece.brand, piece.years].filter(Boolean).join(" · ")}</div>
-        <div style={cs.row}>
-          {piece.city && <span style={cs.city}>📍 {piece.city}</span>}
-          {priceText && <span style={cs.price}>{priceText}</span>}
+    <div style={cs.card}>
+      {/* Sección superior: imagen + datos de la pieza */}
+      <div style={cs.cardTop}>
+        <div style={cs.imgWrap}>
+          {imgSrc ? (
+            <img src={imgSrc} alt={piece.title} style={cs.img} />
+          ) : (
+            <div style={cs.noImg}>🔩</div>
+          )}
+          {piece.condition && (
+            <span style={{ ...cs.condBadge, background: isGood ? "#dcfce7" : "#f1f5f9", color: isGood ? "#15803d" : "#64748b" }}>
+              {piece.condition}
+            </span>
+          )}
         </div>
-        {piece.condition && (
-          <span style={{ ...cs.badge, background: isGood ? "#dcfce7" : "#f1f5f9", color: isGood ? "#15803d" : "#64748b" }}>
-            {piece.condition}
-          </span>
+        <div style={cs.info}>
+          <div style={cs.title}>{piece.title}</div>
+          {(piece.brand || piece.years) && (
+            <div style={cs.sub}>{[piece.brand, piece.years].filter(Boolean).join(" · ")}</div>
+          )}
+          {priceText && <div style={cs.price}>{priceText}</div>}
+        </div>
+      </div>
+
+      {/* Separador */}
+      <div style={cs.divider} />
+
+      {/* Sección del yonker (vendedor) */}
+      <div style={cs.sellerSection}>
+        <div style={cs.sellerMeta}>
+          {piece.yonker && (
+            <div style={cs.sellerName}>
+              <Store size={12} color="#1e4b8f" />
+              {piece.yonker}
+            </div>
+          )}
+          {piece.city && (
+            <button style={cs.cityBtn} onClick={openMap} title="Ver ubicación en Google Maps">
+              <MapPin size={11} color="#ef4444" />
+              <span style={cs.cityText}>{piece.city}</span>
+              <span style={cs.mapHint}>· Ver mapa</span>
+            </button>
+          )}
+        </div>
+
+        {piece.whatsapp && (
+          <button style={cs.waFullBtn} onClick={openWhatsApp}>
+            <WaIcon size={15} />
+            Chatear ahora
+          </button>
         )}
       </div>
-      {piece.whatsapp && (
-        <button style={cs.waBtn} onClick={openWhatsApp} title="Contactar por WhatsApp">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="#fff">
-            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
-          </svg>
-        </button>
-      )}
     </div>
   );
 }
@@ -121,7 +158,15 @@ export default function Messages() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          messages: history.map((m) => ({ role: m.role, content: m.content })),
+          messages: history.map((m) => {
+            if (m.role === "assistant" && m.pieces?.length > 0) {
+              const summary = m.pieces.map((p) =>
+                `• ${p.title}${p.brand ? ` | Marca: ${p.brand}` : ""}${p.years ? ` | Año: ${p.years}` : ""}${p.yonker ? ` | Yonker: ${p.yonker}` : ""}${p.city ? ` | Ciudad: ${p.city}` : ""}${p.price ? ` | Precio: L${p.price}` : ""}${p.condition ? ` | Estado: ${p.condition}` : ""}${p.whatsapp ? ` | WhatsApp: ${p.whatsapp}` : ""} | ID: ${p.id}`
+              ).join("\n");
+              return { role: m.role, content: `${m.content}\n\n[Resultados del inventario]\n${summary}` };
+            }
+            return { role: m.role, content: m.content };
+          }),
         }),
         signal: controller.signal,
       });
@@ -645,92 +690,152 @@ const s = {
 
 /* Chips de pieza */
 const cs = {
-  chip: {
+  card: {
     background: "#fff",
-    borderRadius: 16,
+    borderRadius: 18,
     border: "1px solid #e2e8f0",
+    overflow: "hidden",
+    boxShadow: "0 2px 12px rgba(0,0,0,0.07)",
+    animation: "fadeSlideUp 0.25s ease",
+  },
+  cardTop: {
     display: "flex",
-    alignItems: "center",
+    alignItems: "flex-start",
     gap: 12,
-    padding: "10px 12px",
-    boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
-    transition: "transform 0.15s, box-shadow 0.15s",
+    padding: "12px 14px 12px",
   },
   imgWrap: {
     flexShrink: 0,
+    position: "relative",
   },
   img: {
-    width: 58,
-    height: 58,
+    width: 70,
+    height: 70,
     objectFit: "cover",
-    borderRadius: 12,
+    borderRadius: 14,
     background: "#f1f5f9",
     display: "block",
   },
   noImg: {
-    width: 58,
-    height: 58,
-    borderRadius: 12,
+    width: 70,
+    height: 70,
+    borderRadius: 14,
     background: "linear-gradient(135deg, #f1f5f9, #e2e8f0)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    fontSize: 22,
+    fontSize: 26,
+  },
+  condBadge: {
+    position: "absolute",
+    bottom: -6,
+    left: "50%",
+    transform: "translateX(-50%)",
+    fontSize: 9,
+    fontWeight: 700,
+    padding: "2px 7px",
+    borderRadius: 20,
+    whiteSpace: "nowrap",
+    border: "1.5px solid #fff",
+    boxShadow: "0 1px 4px rgba(0,0,0,0.08)",
   },
   info: {
     flex: 1,
     minWidth: 0,
     display: "flex",
     flexDirection: "column",
-    gap: 3,
+    gap: 4,
+    paddingTop: 2,
   },
   title: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: 700,
     color: "#0f172a",
-    whiteSpace: "nowrap",
+    lineHeight: 1.3,
     overflow: "hidden",
-    textOverflow: "ellipsis",
+    display: "-webkit-box",
+    WebkitLineClamp: 2,
+    WebkitBoxOrient: "vertical",
   },
   sub: {
     fontSize: 11,
     color: "#94a3b8",
-  },
-  row: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 4,
-  },
-  city: {
-    fontSize: 11,
-    color: "#64748b",
+    fontWeight: 500,
   },
   price: {
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: 800,
     color: "#1e4b8f",
+    letterSpacing: "-0.3px",
   },
-  badge: {
-    fontSize: 10,
-    fontWeight: 600,
-    padding: "2px 8px",
-    borderRadius: 20,
-    alignSelf: "flex-start",
-    marginTop: 1,
+  divider: {
+    height: 1,
+    background: "linear-gradient(to right, transparent, #e2e8f0 20%, #e2e8f0 80%, transparent)",
+    margin: "0 14px",
   },
-  waBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: "50%",
-    background: "#16a34a",
-    border: "none",
+  sellerSection: {
+    padding: "10px 14px 12px",
     display: "flex",
     alignItems: "center",
-    justifyContent: "center",
+    gap: 10,
+    justifyContent: "space-between",
+  },
+  sellerMeta: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 4,
+    minWidth: 0,
+    flex: 1,
+  },
+  sellerName: {
+    display: "flex",
+    alignItems: "center",
+    gap: 5,
+    fontSize: 12,
+    fontWeight: 600,
+    color: "#1e4b8f",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+  },
+  cityBtn: {
+    display: "flex",
+    alignItems: "center",
+    gap: 4,
+    background: "none",
+    border: "none",
+    padding: 0,
+    cursor: "pointer",
+    fontSize: 11,
+    color: "#64748b",
+    textAlign: "left",
+  },
+  cityText: {
+    fontWeight: 500,
+    color: "#374151",
+  },
+  mapHint: {
+    color: "#3b82f6",
+    fontWeight: 500,
+    textDecoration: "underline",
+    textDecorationStyle: "dotted",
+  },
+  waFullBtn: {
+    display: "flex",
+    alignItems: "center",
+    gap: 7,
+    background: "linear-gradient(135deg, #16a34a, #15803d)",
+    color: "#fff",
+    border: "none",
+    borderRadius: 12,
+    padding: "9px 14px",
+    fontSize: 12,
+    fontWeight: 700,
     cursor: "pointer",
     flexShrink: 0,
-    boxShadow: "0 2px 10px rgba(22,163,74,0.35)",
-    transition: "transform 0.15s",
+    boxShadow: "0 3px 10px rgba(22,163,74,0.35)",
+    transition: "transform 0.15s, box-shadow 0.15s",
+    whiteSpace: "nowrap",
+    letterSpacing: "-0.1px",
   },
 };
