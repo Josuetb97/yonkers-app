@@ -30,6 +30,10 @@ const STORAGE_BUCKET = "pieces";
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
+const WA_PHONE_NUMBER_ID = process.env.WA_PHONE_NUMBER_ID || "";
+const WA_TOKEN           = process.env.WA_TOKEN || "";
+const WA_TEMPLATE        = "notificacion_solicitud_yonkers";
+
 if (!DATABASE_URL) {
   console.error("❌ DATABASE_URL no está definido en .env");
   process.exit(1);
@@ -187,6 +191,71 @@ ${safeText(data.whatsapp, "-")}
 
 Enviado desde *YONKERS APP*
   `.trim();
+}
+
+/* =========================
+   WHATSAPP TEMPLATE NOTIFY
+========================= */
+
+async function sendWATemplate(toPhone, params) {
+  if (!WA_PHONE_NUMBER_ID || !WA_TOKEN) return;
+  const phone = normalizePhone(toPhone);
+  if (!phone) return;
+
+  const body = {
+    messaging_product: "whatsapp",
+    to: phone,
+    type: "template",
+    template: {
+      name: WA_TEMPLATE,
+      language: { code: "es" },
+      components: [
+        {
+          type: "body",
+          parameters: params.map((v) => ({ type: "text", text: String(v) })),
+        },
+      ],
+    },
+  };
+
+  try {
+    const resp = await fetch(
+      `https://graph.facebook.com/v19.0/${WA_PHONE_NUMBER_ID}/messages`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${WA_TOKEN}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+      }
+    );
+    const json = await resp.json();
+    if (!resp.ok) console.error("❌ WA API error:", JSON.stringify(json));
+    else console.log(`✅ WA enviado a ${phone}`);
+  } catch (e) {
+    console.error("❌ WA fetch error:", e.message);
+  }
+}
+
+async function notifyAllYonkers(request) {
+  try {
+    const { rows: yonkers } = await pool.query(
+      `SELECT name, whatsapp FROM yonkers WHERE active = true AND whatsapp IS NOT NULL AND whatsapp != ''`
+    );
+    for (const y of yonkers) {
+      await sendWATemplate(y.whatsapp, [
+        y.name,                          // {{1}} nombre del yonker
+        request.title  || "-",           // {{2}} pieza
+        request.brand  || "-",           // {{3}} marca
+        request.city   || "-",           // {{4}} ciudad del cliente
+        request.whatsapp || "-",         // {{5}} WhatsApp del cliente
+      ]);
+    }
+    console.log(`📲 Notificados ${yonkers.length} yonkers`);
+  } catch (e) {
+    console.error("❌ Error notificando yonkers:", e.message);
+  }
 }
 
 /* =========================
@@ -778,15 +847,16 @@ app.post("/api/requests", upload.any(), async (req, res) => {
     );
 
     const request = rows[0];
-    const message = buildWhatsAppMessage(request);
+
+    // Notificar a todos los yonkers activos via WhatsApp Business API
+    notifyAllYonkers(request).catch(() => {});
 
     res.json({
       ok: true,
       request,
       whatsapp: {
         phone: normalizePhone(whatsapp),
-        message,
-        url: `https://wa.me/${normalizePhone(whatsapp)}?text=${encodeURIComponent(message)}`,
+        url: `https://wa.me/${normalizePhone(whatsapp)}`,
       },
     });
   } catch (err) {
