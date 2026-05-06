@@ -4,8 +4,9 @@ import { supabase } from "../../lib/supabase";
 import SellerOnboardingModal from "../../components/SellerOnboardingModal";
 import { compressImages } from "../../lib/compressImage";
 
-const PROFILE_KEY      = "yonkers_admin_profile";
-const SUPER_ADMIN_EMAIL = "josuetb19997@gmail.com";
+const PROFILE_KEY       = "yonkers_admin_profile";
+const SUPER_ADMIN_EMAIL  = "josuetb19997@gmail.com";
+const NOTIFY_ADMIN_URL   = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/notify-admin-registration`;
 
 /* ─────────────────────────────────────────────────────────────
    FIELD CONFIG
@@ -522,6 +523,20 @@ export default function Admin() {
         active:      false,
       });
       if (error) throw error;
+
+      // Notificar al admin por email (sin esperar respuesta — no bloquea)
+      fetch(NOTIFY_ADMIN_URL, {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name:        regForm.name.trim(),
+          city:        regForm.city.trim(),
+          whatsapp:    regForm.whatsapp.replace(/\D/g, ""),
+          email:       user.email ?? "",
+          description: regForm.description.trim(),
+        }),
+      }).catch(() => {}); // ignorar errores de notificación
+
       setYonkerStatus("pending");
     } catch (err) {
       setRegMsg(err.message || "Error enviando solicitud.");
