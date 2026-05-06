@@ -4,7 +4,6 @@ import { supabase } from "../../lib/supabase";
 import SellerOnboardingModal from "../../components/SellerOnboardingModal";
 import { compressImages } from "../../lib/compressImage";
 
-const API = import.meta.env.VITE_API_URL || "/api";
 const PROFILE_KEY = "yonkers_admin_profile";
 
 /* ─────────────────────────────────────────────────────────────
@@ -50,32 +49,16 @@ function resolveImageUrl(imagePath) {
   return imagePath;
 }
 
-async function getToken() {
-  const { data: { session }, error } = await supabase.auth.getSession();
-  if (error || !session?.access_token) return null;
-  return session.access_token;
-}
-
-async function apiFetch(path, options = {}) {
-  const token = await getToken();
-  if (!token) throw new Error("No hay sesión activa. Por favor inicia sesión.");
-
-  const res = await fetch(`${API}${path}`, {
-    ...options,
-    headers: {
-      Authorization: `Bearer ${token}`,
-      ...(options.headers || {}),
-    },
-  });
-
-  let body;
-  try { body = await res.json(); } catch { body = null; }
-
-  if (!res.ok) {
-    const msg = body?.error || body?.message || `Error ${res.status}: ${res.statusText}`;
-    throw new Error(msg);
-  }
-  return body;
+/** Sube una imagen a Supabase Storage y devuelve la URL pública */
+async function uploadImage(file) {
+  const ext      = file.name?.split(".").pop() || "jpg";
+  const filename = `pieces/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+  const { error } = await supabase.storage
+    .from("pieces")
+    .upload(filename, file, { contentType: file.type, upsert: false });
+  if (error) throw new Error(`Upload: ${error.message}`);
+  const { data } = supabase.storage.from("pieces").getPublicUrl(filename);
+  return data.publicUrl;
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -456,7 +439,15 @@ export default function Admin() {
   async function loadPieces() {
     setLoading(true);
     try {
-      const data = await apiFetch("/my/pieces");
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("No hay sesión activa.");
+      const { data, error } = await supabase
+        .from("pieces")
+        .select("*")
+        .eq("owner_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(200);
+      if (error) throw error;
       setPieces(Array.isArray(data) ? data : []);
     } catch (err) {
       setMsg({ text: err.message || "Error cargando piezas.", type: "error" });
@@ -528,32 +519,58 @@ export default function Admin() {
     if (!form.brand.trim())  { setMsg({ text: "La marca / modelo es obligatoria.", type: "error" }); return; }
     if (!form.yonker.trim()) { setMsg({ text: "El nombre del yonker es obligatorio.", type: "error" }); return; }
 
-    const token = await getToken();
-    if (!token) { setMsg({ text: "No hay sesión activa. Por favor inicia sesión.", type: "error" }); return; }
-
     setSaving(true);
-
-    const fd = new FormData();
-    Object.entries(form).forEach(([k, v]) => fd.append(k, v ?? ""));
-    const compressed = await compressImages(files);
-    compressed.forEach((f) => fd.append("images", f));
-
     try {
-      const data = await apiFetch("/pieces", { method: "POST", body: fd });
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("No hay sesión activa. Por favor inicia sesión.");
+
+      // Subir imágenes
+      const compressed  = await compressImages(files);
+      const imageUrls   = [];
+      for (const file of compressed) {
+        const url = await uploadImage(file);
+        imageUrls.push(url);
+      }
+
+      const pieceData = {
+        title:     form.title.trim(),
+        brand:     form.brand.trim(),
+        years:     form.years.trim(),
+        price:     form.price ? Number(form.price) : 0,
+        yonker:    form.yonker.trim(),
+        city:      form.city.trim(),
+        condition: form.condition.trim(),
+        whatsapp:  "",
+        images:    imageUrls,
+        owner_id:  user.id,
+      };
 
       if (editingId) {
-        try { await apiFetch(`/pieces/${editingId}`, { method: "DELETE" }); setPieces((prev) => prev.filter((p) => p.id !== editingId)); } catch { /* non-critical */ }
-        setPieces((prev) => [data, ...prev]);
+        // Actualizar
+        const { data, error } = await supabase
+          .from("pieces")
+          .update(pieceData)
+          .eq("id", editingId)
+          .eq("owner_id", user.id)
+          .select()
+          .single();
+        if (error) throw error;
+        setPieces((prev) => prev.map((p) => p.id === editingId ? data : p));
         setMsg({ text: "Pieza actualizada correctamente", type: "success" });
       } else {
+        // Crear nueva
+        const { data, error } = await supabase
+          .from("pieces")
+          .insert(pieceData)
+          .select()
+          .single();
+        if (error) throw error;
         setPieces((prev) => [data, ...prev]);
         setMsg({ text: "Pieza publicada correctamente", type: "success" });
       }
 
       setEditingId(null);
-      resetPieceFields(); // ← solo limpia campos de la pieza
-
-      /* Sincronizar perfil con Supabase */
+      resetPieceFields();
       syncProfileToDB().catch(() => {});
 
     } catch (err) {
@@ -584,7 +601,9 @@ export default function Admin() {
   async function handleDelete(id) {
     if (!window.confirm("¿Eliminar esta pieza?")) return;
     try {
-      await apiFetch(`/pieces/${id}`, { method: "DELETE" });
+      const { data: { user } } = await supabase.auth.getUser();
+      const { error } = await supabase.from("pieces").delete().eq("id", id).eq("owner_id", user?.id);
+      if (error) throw error;
       setPieces((prev) => prev.filter((x) => x.id !== id));
       if (editingId === id) { setEditingId(null); resetPieceFields(); }
     } catch (err) {
