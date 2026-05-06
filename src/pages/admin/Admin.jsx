@@ -4,7 +4,8 @@ import { supabase } from "../../lib/supabase";
 import SellerOnboardingModal from "../../components/SellerOnboardingModal";
 import { compressImages } from "../../lib/compressImage";
 
-const PROFILE_KEY = "yonkers_admin_profile";
+const PROFILE_KEY      = "yonkers_admin_profile";
+const SUPER_ADMIN_EMAIL = "josuetb19997@gmail.com";
 
 /* ─────────────────────────────────────────────────────────────
    FIELD CONFIG
@@ -343,7 +344,7 @@ export default function Admin() {
 
   const [form,            setForm]            = useState(EMPTY_FORM);
   const [profileLoaded,   setProfileLoaded]   = useState(false);
-  const [profileExpanded, setProfileExpanded] = useState(false); // colapsa cuando ya hay datos
+  const [profileExpanded, setProfileExpanded] = useState(false);
   const [files,           setFiles]           = useState([]);
   const [preview,         setPreview]         = useState([]);
   const [saving,          setSaving]          = useState(false);
@@ -352,6 +353,24 @@ export default function Admin() {
   const [msg,             setMsg]             = useState({ text: "", type: "" });
   const [search,          setSearch]          = useState("");
   const [editingId,       setEditingId]       = useState(null);
+
+  // Control de acceso
+  const [authChecked,     setAuthChecked]     = useState(false);
+  const [currentUser,     setCurrentUser]     = useState(null);
+  const [yonkerStatus,    setYonkerStatus]    = useState(null); // null | 'pending' | 'approved' | 'rejected'
+  const [rejectionReason, setRejectionReason] = useState("");
+  const isSuperAdmin = currentUser?.email === SUPER_ADMIN_EMAIL;
+
+  // Registro de nuevos yonkers
+  const [regForm,     setRegForm]     = useState({ name: "", city: "", whatsapp: "", description: "" });
+  const [regSaving,   setRegSaving]   = useState(false);
+  const [regMsg,      setRegMsg]      = useState("");
+
+  // Panel super-admin
+  const [pendingList,   setPendingList]   = useState([]);
+  const [adminView,     setAdminView]     = useState("pieces"); // 'pieces' | 'solicitudes'
+  const [rejectId,      setRejectId]      = useState(null);
+  const [rejectReason,  setRejectReason]  = useState("");
   const [isMobile,        setIsMobile]        = useState(window.innerWidth < 640);
 
   useEffect(() => {
@@ -363,8 +382,16 @@ export default function Admin() {
   const objectUrlsRef = useRef([]);
 
   useEffect(() => {
-    loadProfile();
-    loadPieces();
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setCurrentUser(user);
+      setAuthChecked(true);
+      if (user) {
+        await loadProfile(user);
+        if (user.email === SUPER_ADMIN_EMAIL) loadPendingYonkers();
+        loadPieces(user);
+      }
+    })();
     return () => { objectUrlsRef.current.forEach((url) => URL.revokeObjectURL(url)); };
   }, []);
 
@@ -376,75 +403,62 @@ export default function Admin() {
     localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
   }, [form.yonker, form.city, form.lat, form.lng, form.instagram, form.facebook, form.tiktok]);
 
-  /* ── Cargar perfil: Supabase → localStorage → piezas ── */
-  async function loadProfile() {
-    let profile = null;
-
-    // 1. Intentar desde Supabase (yonkers table by owner_id)
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data } = await supabase
-          .from("yonkers")
-          .select("name, city, lat, lng, instagram, facebook, tiktok")
-          .eq("owner_id", user.id)
-          .maybeSingle();
-
-        if (data) {
-          profile = {
-            yonker:    data.name      || "",
-            city:      data.city      || "",
-            lat:       data.lat       ? String(data.lat) : "",
-            lng:       data.lng       ? String(data.lng) : "",
-            instagram: data.instagram || "",
-            facebook:  data.facebook  || "",
-            tiktok:    data.tiktok    || "",
-          };
-        }
-      }
-    } catch { /* continuar con siguiente fuente */ }
-
-    // 2. Fallback: localStorage
-    if (!profile) {
-      try {
-        const saved = localStorage.getItem(PROFILE_KEY);
-        if (saved) profile = JSON.parse(saved);
-      } catch { /* ignorar */ }
-    }
-
-    // 3. Fallback: pieza más reciente
-    if (!profile) {
-      try {
-        const data = await apiFetch("/my/pieces");
-        if (data?.length > 0) {
-          const p = data[0];
-          profile = {
-            yonker: p.yonker || "",
-            city:   p.city   || "",
-            lat: "", lng: "", instagram: "", facebook: "", tiktok: "",
-          };
-        }
-      } catch { /* ignorar */ }
-    }
-
-    if (profile) {
-      setForm((f) => ({ ...f, ...profile }));
+  /* ── Cargar perfil y verificar estado de aprobación ── */
+  async function loadProfile(user) {
+    // Super-admin siempre aprobado
+    if (user?.email === SUPER_ADMIN_EMAIL) {
+      setYonkerStatus("approved");
       setProfileLoaded(true);
-      setProfileExpanded(false); // colapsar si ya tiene datos
-    } else {
-      setProfileExpanded(true); // expandir si es primera vez
+      return;
     }
+
+    // 1. Buscar en tabla yonkers por owner_id
+    try {
+      const { data } = await supabase
+        .from("yonkers")
+        .select("name, city, lat, lng, instagram, facebook, tiktok, status, rejection_reason")
+        .eq("owner_id", user.id)
+        .maybeSingle();
+
+      if (data) {
+        setYonkerStatus(data.status ?? "pending");
+        if (data.status === "rejected") {
+          setRejectionReason(data.rejection_reason || "");
+          return;
+        }
+        if (data.status !== "approved") return; // pending — no cargar form
+
+        // Aprobado → cargar perfil
+        const profile = {
+          yonker:    data.name      || "",
+          city:      data.city      || "",
+          lat:       data.lat       ? String(data.lat) : "",
+          lng:       data.lng       ? String(data.lng) : "",
+          instagram: data.instagram || "",
+          facebook:  data.facebook  || "",
+          tiktok:    data.tiktok    || "",
+        };
+        setForm((f) => ({ ...f, ...profile }));
+        setProfileLoaded(true);
+        setProfileExpanded(false);
+        return;
+      }
+    } catch { /* continuar */ }
+
+    // 2. Sin registro en yonkers → nuevo yonker, debe registrarse
+    setYonkerStatus(null);
+    setProfileExpanded(true);
   }
 
-  async function loadPieces() {
+  async function loadPieces(user) {
     setLoading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("No hay sesión activa.");
+      const u = user || (await supabase.auth.getUser()).data.user;
+      if (!u) throw new Error("No hay sesión activa.");
       const { data, error } = await supabase
         .from("pieces")
         .select("*")
-        .eq("owner_id", user.id)
+        .eq("owner_id", u.id)
         .order("created_at", { ascending: false })
         .limit(200);
       if (error) throw error;
@@ -454,6 +468,65 @@ export default function Admin() {
       setPieces([]);
     } finally {
       setLoading(false);
+    }
+  }
+
+  /* ── Cargar solicitudes pendientes (solo super-admin) ── */
+  async function loadPendingYonkers() {
+    const { data } = await supabase
+      .from("yonkers")
+      .select("id, name, city, whatsapp, email, status, rejection_reason, instagram, facebook, created_at")
+      .in("status", ["pending", "rejected"])
+      .order("created_at", { ascending: false });
+    setPendingList(data ?? []);
+  }
+
+  /* ── Aprobar yonker (super-admin) ── */
+  async function approveYonker(id) {
+    const { error } = await supabase
+      .from("yonkers")
+      .update({ status: "approved", rejection_reason: "" })
+      .eq("id", id);
+    if (!error) loadPendingYonkers();
+  }
+
+  /* ── Rechazar yonker (super-admin) ── */
+  async function rejectYonker(id, reason) {
+    const { error } = await supabase
+      .from("yonkers")
+      .update({ status: "rejected", rejection_reason: reason || "No cumple los requisitos." })
+      .eq("id", id);
+    if (!error) { loadPendingYonkers(); setRejectId(null); setRejectReason(""); }
+  }
+
+  /* ── Registrar nuevo yonker (solicitud) ── */
+  async function submitRegistration(e) {
+    e.preventDefault();
+    if (!regForm.name.trim() || !regForm.whatsapp.trim()) {
+      setRegMsg("El nombre y WhatsApp son obligatorios.");
+      return;
+    }
+    setRegSaving(true);
+    setRegMsg("");
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("No hay sesión activa.");
+
+      const { error } = await supabase.from("yonkers").insert({
+        owner_id:    user.id,
+        email:       user.email ?? "",
+        name:        regForm.name.trim(),
+        city:        regForm.city.trim(),
+        whatsapp:    regForm.whatsapp.replace(/\D/g, ""),
+        status:      "pending",
+        active:      false,
+      });
+      if (error) throw error;
+      setYonkerStatus("pending");
+    } catch (err) {
+      setRegMsg(err.message || "Error enviando solicitud.");
+    } finally {
+      setRegSaving(false);
     }
   }
 
@@ -580,7 +653,7 @@ export default function Admin() {
     }
   }
 
-  /** Upsert del perfil del yonker en la tabla yonkers */
+  /** Upsert del perfil del yonker — nunca sobreescribe status */
   async function syncProfileToDB() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user || !form.yonker.trim()) return;
@@ -594,8 +667,8 @@ export default function Admin() {
       instagram: form.instagram || "",
       facebook:  form.facebook  || "",
       tiktok:    form.tiktok    || "",
-      active:    true,
-    }, { onConflict: "owner_id" });
+      // NO incluimos status ni email — no deben cambiar aquí
+    }, { onConflict: "owner_id", ignoreDuplicates: false });
   }
 
   async function handleDelete(id) {
@@ -638,6 +711,118 @@ export default function Admin() {
     resetPieceFields();
   }
 
+  /* ── Pantalla: verificando sesión ── */
+  if (!authChecked) {
+    return (
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh", background: "#f8fafc" }}>
+        <div style={{ textAlign: "center" }}>
+          <div style={{ width: 36, height: 36, border: "3px solid #e2e8f0", borderTopColor: "#2563eb", borderRadius: "50%", animation: "spin 0.8s linear infinite", margin: "0 auto 12px" }} />
+          <div style={{ color: "#64748b", fontSize: 14 }}>Verificando acceso…</div>
+        </div>
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
+    );
+  }
+
+  /* ── Pantalla: formulario de registro (nuevo yonker) ── */
+  if (yonkerStatus === null && !isSuperAdmin) {
+    return (
+      <div style={{ minHeight: "100vh", background: "#f8fafc", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+        <div style={{ width: "100%", maxWidth: 420, background: "#fff", borderRadius: 16, boxShadow: "0 4px 24px rgba(0,0,0,0.08)", padding: 28 }}>
+          <div style={{ textAlign: "center", marginBottom: 24 }}>
+            <div style={{ fontSize: 40, marginBottom: 8 }}>🏪</div>
+            <div style={{ fontSize: 20, fontWeight: 800, color: "#0f172a" }}>Solicita tu acceso de Yonker</div>
+            <div style={{ fontSize: 13, color: "#64748b", marginTop: 6 }}>Completa el formulario — revisaremos tu solicitud y te activaremos pronto</div>
+          </div>
+
+          {regMsg && (
+            <div style={{ background: "#fef2f2", border: "1px solid #fca5a5", color: "#991b1b", borderRadius: 8, padding: "10px 14px", fontSize: 13, marginBottom: 16 }}>
+              {regMsg}
+            </div>
+          )}
+
+          <form onSubmit={submitRegistration} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 600, color: "#374151", display: "block", marginBottom: 4 }}>Nombre de tu yonker / negocio <span style={{ color: "#ef4444" }}>*</span></label>
+              <input value={regForm.name} onChange={(e) => setRegForm((f) => ({ ...f, name: e.target.value }))}
+                placeholder="Ej: DyM Yonker SPS" required
+                style={{ width: "100%", padding: "10px 12px", borderRadius: 9, border: "1.5px solid #e2e8f0", fontSize: 14, boxSizing: "border-box" }} />
+            </div>
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 600, color: "#374151", display: "block", marginBottom: 4 }}>Ciudad / Departamento</label>
+              <input value={regForm.city} onChange={(e) => setRegForm((f) => ({ ...f, city: e.target.value }))}
+                placeholder="Ej: San Pedro Sula"
+                style={{ width: "100%", padding: "10px 12px", borderRadius: 9, border: "1.5px solid #e2e8f0", fontSize: 14, boxSizing: "border-box" }} />
+            </div>
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 600, color: "#374151", display: "block", marginBottom: 4 }}>WhatsApp (con código de país) <span style={{ color: "#ef4444" }}>*</span></label>
+              <input value={regForm.whatsapp} onChange={(e) => setRegForm((f) => ({ ...f, whatsapp: e.target.value }))}
+                placeholder="504XXXXXXXX" required type="tel"
+                style={{ width: "100%", padding: "10px 12px", borderRadius: 9, border: "1.5px solid #e2e8f0", fontSize: 14, boxSizing: "border-box" }} />
+            </div>
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 600, color: "#374151", display: "block", marginBottom: 4 }}>Cuéntanos sobre tu negocio (opcional)</label>
+              <textarea value={regForm.description} onChange={(e) => setRegForm((f) => ({ ...f, description: e.target.value }))}
+                placeholder="¿Qué tipo de piezas vendes? ¿Cuánto tiempo llevas en el negocio?"
+                rows={3}
+                style={{ width: "100%", padding: "10px 12px", borderRadius: 9, border: "1.5px solid #e2e8f0", fontSize: 14, resize: "vertical", boxSizing: "border-box", fontFamily: "system-ui,sans-serif" }} />
+            </div>
+            <button type="submit" disabled={regSaving}
+              style={{ background: "#2563eb", color: "#fff", border: "none", borderRadius: 10, padding: "12px 0", fontSize: 15, fontWeight: 700, cursor: regSaving ? "not-allowed" : "pointer", opacity: regSaving ? 0.7 : 1 }}>
+              {regSaving ? "Enviando…" : "📨 Enviar solicitud"}
+            </button>
+          </form>
+
+          <button onClick={() => navigate("/")} style={{ width: "100%", marginTop: 10, background: "transparent", border: "none", color: "#64748b", fontSize: 13, cursor: "pointer", padding: "8px 0" }}>
+            ← Volver al inicio
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  /* ── Pantalla: solicitud pendiente ── */
+  if (yonkerStatus === "pending" && !isSuperAdmin) {
+    return (
+      <div style={{ minHeight: "100vh", background: "#f8fafc", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+        <div style={{ width: "100%", maxWidth: 400, background: "#fff", borderRadius: 16, boxShadow: "0 4px 24px rgba(0,0,0,0.08)", padding: 32, textAlign: "center" }}>
+          <div style={{ fontSize: 48, marginBottom: 12 }}>⏳</div>
+          <div style={{ fontSize: 20, fontWeight: 800, color: "#0f172a", marginBottom: 8 }}>Solicitud en revisión</div>
+          <div style={{ fontSize: 13, color: "#64748b", lineHeight: 1.6 }}>
+            Tu solicitud fue enviada correctamente.<br />
+            La revisaremos y te activaremos pronto.<br />
+            <strong>Normalmente tardamos menos de 24 horas.</strong>
+          </div>
+          <button onClick={() => navigate("/")} style={{ marginTop: 24, background: "#f1f5f9", border: "none", borderRadius: 10, padding: "10px 24px", fontSize: 14, fontWeight: 600, color: "#374151", cursor: "pointer" }}>
+            ← Volver al inicio
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  /* ── Pantalla: solicitud rechazada ── */
+  if (yonkerStatus === "rejected" && !isSuperAdmin) {
+    return (
+      <div style={{ minHeight: "100vh", background: "#f8fafc", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+        <div style={{ width: "100%", maxWidth: 400, background: "#fff", borderRadius: 16, boxShadow: "0 4px 24px rgba(0,0,0,0.08)", padding: 32, textAlign: "center" }}>
+          <div style={{ fontSize: 48, marginBottom: 12 }}>❌</div>
+          <div style={{ fontSize: 20, fontWeight: 800, color: "#0f172a", marginBottom: 8 }}>Solicitud rechazada</div>
+          {rejectionReason && (
+            <div style={{ background: "#fef2f2", border: "1px solid #fca5a5", borderRadius: 10, padding: "12px 16px", fontSize: 13, color: "#991b1b", margin: "12px 0", textAlign: "left" }}>
+              <strong>Motivo:</strong> {rejectionReason}
+            </div>
+          )}
+          <div style={{ fontSize: 13, color: "#64748b" }}>Si crees que es un error, contacta al administrador.</div>
+          <button onClick={() => navigate("/")} style={{ marginTop: 24, background: "#f1f5f9", border: "none", borderRadius: 10, padding: "10px 24px", fontSize: 14, fontWeight: 600, color: "#374151", cursor: "pointer" }}>
+            ← Volver al inicio
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={st.page}>
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
@@ -648,11 +833,107 @@ export default function Admin() {
         {/* ══ HEADER ══ */}
         <div style={st.pageHeader}>
           <div>
-            <div style={st.pageTitle}>Panel Yonkers</div>
-            <div style={st.pageSubtitle}>Administra tus piezas disponibles</div>
+            <div style={st.pageTitle}>{isSuperAdmin ? "🛡️ Panel Super-Admin" : "Panel Yonkers"}</div>
+            <div style={st.pageSubtitle}>{isSuperAdmin ? "Gestiona yonkers y piezas del marketplace" : "Administra tus piezas disponibles"}</div>
           </div>
           <button onClick={() => navigate("/")} style={st.backBtn} type="button">← Volver</button>
         </div>
+
+        {/* ══ TABS SUPER-ADMIN ══ */}
+        {isSuperAdmin && (
+          <div style={{ display: "flex", gap: 8, padding: "0 0 16px" }}>
+            <button onClick={() => setAdminView("pieces")} type="button"
+              style={{ padding: "8px 18px", borderRadius: 8, border: "none", fontWeight: 700, fontSize: 13, cursor: "pointer",
+                background: adminView === "pieces" ? "#2563eb" : "#f1f5f9", color: adminView === "pieces" ? "#fff" : "#374151" }}>
+              📦 Mis piezas
+            </button>
+            <button onClick={() => { setAdminView("solicitudes"); loadPendingYonkers(); }} type="button"
+              style={{ position: "relative", padding: "8px 18px", borderRadius: 8, border: "none", fontWeight: 700, fontSize: 13, cursor: "pointer",
+                background: adminView === "solicitudes" ? "#2563eb" : "#f1f5f9", color: adminView === "solicitudes" ? "#fff" : "#374151" }}>
+              🧾 Solicitudes
+              {pendingList.filter(y => y.status === "pending").length > 0 && (
+                <span style={{ position: "absolute", top: -6, right: -6, background: "#ef4444", color: "#fff", borderRadius: "50%", width: 18, height: 18, fontSize: 10, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  {pendingList.filter(y => y.status === "pending").length}
+                </span>
+              )}
+            </button>
+          </div>
+        )}
+
+        {/* ══ PANEL DE SOLICITUDES (super-admin) ══ */}
+        {isSuperAdmin && adminView === "solicitudes" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            {pendingList.length === 0 && (
+              <div style={{ background: "#fff", borderRadius: 14, padding: 32, textAlign: "center", color: "#94a3b8", fontSize: 14 }}>
+                No hay solicitudes pendientes 🎉
+              </div>
+            )}
+            {pendingList.map((y) => (
+              <div key={y.id} style={{ background: "#fff", borderRadius: 14, border: "1px solid #e2e8f0", padding: 18, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 8 }}>
+                  <div>
+                    <div style={{ fontWeight: 800, fontSize: 16, color: "#0f172a" }}>{y.name}</div>
+                    <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>
+                      {[y.city, y.whatsapp && `📱 ${y.whatsapp}`, y.email && `✉️ ${y.email}`].filter(Boolean).join("  ·  ")}
+                    </div>
+                    {y.instagram && <div style={{ fontSize: 12, color: "#64748b" }}>IG: {y.instagram}</div>}
+                  </div>
+                  <span style={{ padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 700,
+                    background: y.status === "pending" ? "#fef9c3" : "#fee2e2",
+                    color: y.status === "pending" ? "#854d0e" : "#991b1b" }}>
+                    {y.status === "pending" ? "⏳ Pendiente" : "❌ Rechazado"}
+                  </span>
+                </div>
+
+                {y.rejection_reason && (
+                  <div style={{ marginTop: 8, fontSize: 12, color: "#991b1b", background: "#fef2f2", borderRadius: 7, padding: "6px 10px" }}>
+                    Motivo rechazo: {y.rejection_reason}
+                  </div>
+                )}
+
+                {/* Rechazar — formulario de razón */}
+                {rejectId === y.id && (
+                  <div style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    <input value={rejectReason} onChange={(e) => setRejectReason(e.target.value)}
+                      placeholder="Motivo del rechazo (opcional)"
+                      style={{ flex: 1, minWidth: 180, padding: "8px 10px", borderRadius: 8, border: "1.5px solid #fca5a5", fontSize: 13 }} />
+                    <button onClick={() => rejectYonker(y.id, rejectReason)} type="button"
+                      style={{ padding: "8px 14px", background: "#ef4444", color: "#fff", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+                      Confirmar rechazo
+                    </button>
+                    <button onClick={() => setRejectId(null)} type="button"
+                      style={{ padding: "8px 14px", background: "#f1f5f9", color: "#374151", border: "none", borderRadius: 8, fontSize: 13, cursor: "pointer" }}>
+                      Cancelar
+                    </button>
+                  </div>
+                )}
+
+                {rejectId !== y.id && (
+                  <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
+                    <button onClick={() => approveYonker(y.id)} type="button"
+                      style={{ padding: "8px 18px", background: "#16a34a", color: "#fff", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+                      ✅ Aprobar
+                    </button>
+                    <button onClick={() => { setRejectId(y.id); setRejectReason(""); }} type="button"
+                      style={{ padding: "8px 18px", background: "#fef2f2", color: "#ef4444", border: "1px solid #fca5a5", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+                      ❌ Rechazar
+                    </button>
+                    {y.whatsapp && (
+                      <a href={`https://wa.me/${y.whatsapp}?text=Hola ${encodeURIComponent(y.name)}, ya revisamos tu solicitud en Yonkers App.`}
+                        target="_blank" rel="noopener noreferrer"
+                        style={{ padding: "8px 18px", background: "#25D366", color: "#fff", borderRadius: 8, fontSize: 13, fontWeight: 700, textDecoration: "none" }}>
+                        💬 WhatsApp
+                      </a>
+                    )}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* ══ Panel de piezas (yonker normal o super-admin en vista pieces) ══ */}
+        {(!isSuperAdmin || adminView === "pieces") && (<>
 
         {/* ══ KPI STRIP ══ */}
         <div style={st.kpiRow}>
@@ -829,6 +1110,7 @@ export default function Admin() {
           </div>
         </div>
 
+        </>)}
       </div>
     </div>
   );
