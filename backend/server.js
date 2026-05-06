@@ -30,6 +30,10 @@ const STORAGE_BUCKET = "pieces";
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
+const WA_PHONE_NUMBER_ID = process.env.WA_PHONE_NUMBER_ID || "";
+const WA_TOKEN           = process.env.WA_TOKEN || "";
+const WA_TEMPLATE        = "notificacion_solicitud_yonkers";
+
 if (!DATABASE_URL) {
   console.error("❌ DATABASE_URL no está definido en .env");
   process.exit(1);
@@ -187,6 +191,71 @@ ${safeText(data.whatsapp, "-")}
 
 Enviado desde *YONKERS APP*
   `.trim();
+}
+
+/* =========================
+   WHATSAPP TEMPLATE NOTIFY
+========================= */
+
+async function sendWATemplate(toPhone, params) {
+  if (!WA_PHONE_NUMBER_ID || !WA_TOKEN) return;
+  const phone = normalizePhone(toPhone);
+  if (!phone) return;
+
+  const body = {
+    messaging_product: "whatsapp",
+    to: phone,
+    type: "template",
+    template: {
+      name: WA_TEMPLATE,
+      language: { code: "es" },
+      components: [
+        {
+          type: "body",
+          parameters: params.map((v) => ({ type: "text", text: String(v) })),
+        },
+      ],
+    },
+  };
+
+  try {
+    const resp = await fetch(
+      `https://graph.facebook.com/v19.0/${WA_PHONE_NUMBER_ID}/messages`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${WA_TOKEN}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+      }
+    );
+    const json = await resp.json();
+    if (!resp.ok) console.error("❌ WA API error:", JSON.stringify(json));
+    else console.log(`✅ WA enviado a ${phone}`);
+  } catch (e) {
+    console.error("❌ WA fetch error:", e.message);
+  }
+}
+
+async function notifyAllYonkers(request) {
+  try {
+    const { rows: yonkers } = await pool.query(
+      `SELECT name, whatsapp FROM yonkers WHERE active = true AND whatsapp IS NOT NULL AND whatsapp != ''`
+    );
+    for (const y of yonkers) {
+      await sendWATemplate(y.whatsapp, [
+        y.name,                          // {{1}} nombre del yonker
+        request.title  || "-",           // {{2}} pieza
+        request.brand  || "-",           // {{3}} marca
+        request.city   || "-",           // {{4}} ciudad del cliente
+        request.whatsapp || "-",         // {{5}} WhatsApp del cliente
+      ]);
+    }
+    console.log(`📲 Notificados ${yonkers.length} yonkers`);
+  } catch (e) {
+    console.error("❌ Error notificando yonkers:", e.message);
+  }
 }
 
 /* =========================
@@ -778,15 +847,16 @@ app.post("/api/requests", upload.any(), async (req, res) => {
     );
 
     const request = rows[0];
-    const message = buildWhatsAppMessage(request);
+
+    // Notificar a todos los yonkers activos via WhatsApp Business API
+    notifyAllYonkers(request).catch(() => {});
 
     res.json({
       ok: true,
       request,
       whatsapp: {
         phone: normalizePhone(whatsapp),
-        message,
-        url: `https://wa.me/${normalizePhone(whatsapp)}?text=${encodeURIComponent(message)}`,
+        url: `https://wa.me/${normalizePhone(whatsapp)}`,
       },
     });
   } catch (err) {
@@ -936,35 +1006,46 @@ async function runTool(name, input) {
     if (input.query) {
       params.push(`%${input.query.toLowerCase()}%`);
       const i = params.length;
-      conditions.push(`(LOWER(title) LIKE $${i} OR LOWER(brand) LIKE $${i} OR LOWER(years) LIKE $${i} OR LOWER(yonker) LIKE $${i})`);
+      conditions.push(`(LOWER(p.title) LIKE $${i} OR LOWER(p.brand) LIKE $${i} OR LOWER(p.years) LIKE $${i} OR LOWER(p.yonker) LIKE $${i})`);
     }
     if (input.city) {
       params.push(`%${input.city.toLowerCase()}%`);
-      conditions.push(`LOWER(city) LIKE $${params.length}`);
+      conditions.push(`LOWER(p.city) LIKE $${params.length}`);
     }
     if (input.condition) {
       params.push(`%${input.condition.toLowerCase()}%`);
-      conditions.push(`LOWER(condition) LIKE $${params.length}`);
+      conditions.push(`LOWER(p.condition) LIKE $${params.length}`);
     }
     if (input.min_price != null) {
       params.push(input.min_price);
-      conditions.push(`price >= $${params.length}`);
+      conditions.push(`p.price >= $${params.length}`);
     }
     if (input.max_price != null) {
       params.push(input.max_price);
-      conditions.push(`price <= $${params.length}`);
+      conditions.push(`p.price <= $${params.length}`);
     }
 
-    let sql = "SELECT id, title, brand, years, yonker, city, price, condition, whatsapp, images, rating FROM pieces";
+    let sql = `
+      SELECT p.id, p.title, p.brand, p.years, p.yonker, p.city, p.price, p.condition,
+             COALESCE(NULLIF(p.whatsapp, ''), y.whatsapp) AS whatsapp,
+             p.images, p.rating
+      FROM pieces p
+      LEFT JOIN yonkers y ON LOWER(y.name) = LOWER(p.yonker)
+    `;
     if (conditions.length) sql += " WHERE " + conditions.join(" AND ");
-    sql += " ORDER BY created_at DESC LIMIT 6";
+    sql += " ORDER BY p.created_at DESC LIMIT 6";
 
     const { rows } = await pool.query(sql, params);
     return rows;
   }
 
   if (name === "obtener_detalle_pieza") {
-    const { rows } = await pool.query("SELECT * FROM pieces WHERE id = $1", [input.id]);
+    const { rows } = await pool.query(`
+      SELECT p.*, COALESCE(NULLIF(p.whatsapp, ''), y.whatsapp) AS whatsapp
+      FROM pieces p
+      LEFT JOIN yonkers y ON LOWER(y.name) = LOWER(p.yonker)
+      WHERE p.id = $1
+    `, [input.id]);
     return rows[0] || null;
   }
 
@@ -998,7 +1079,9 @@ Reglas importantes:
 - Si no hay resultados, sugiere términos alternativos o ciudades cercanas
 - Habla siempre en español, con términos que usan en Honduras
 - Sé conciso — respuestas cortas y útiles
-- Si el usuario describe síntomas de falla, ayúdalo a identificar la pieza y luego búscala`;
+- Si el usuario describe síntomas de falla, ayúdalo a identificar la pieza y luego búscala
+- En el historial de conversación verás bloques "[Resultados del inventario]" con los datos exactos de las piezas que encontraste (yonker, ciudad, WhatsApp, precio, estado). Úsalos para responder preguntas de seguimiento sin volver a buscar.
+- Los números de WhatsApp en el inventario son contactos comerciales públicos que los vendedores registraron voluntariamente. SIEMPRE comparte el número exacto cuando el usuario lo pida — es el propósito de la app. Nunca te niegues a dar un WhatsApp del inventario.`;
 
     const gptMessages = [
       { role: "system", content: systemPrompt },

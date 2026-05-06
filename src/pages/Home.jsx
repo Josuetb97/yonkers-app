@@ -13,6 +13,7 @@ import { PieceGridSkeleton } from "../components/ui/Skeleton";
 import { useToast } from "../components/ui/Toast";
 import { useFavorites } from "../hooks/useFavorites";
 import { useCart } from "../hooks/useCart";
+import { useRecentlyViewed } from "../hooks/useRecentlyViewed";
 import { useAnalytics } from "../hooks/useAnalytics";
 import { useVoiceSearch } from "../hooks/useVoiceSearch";
 import PhotoSearchModal from "../components/modals/PhotoSearchModal";
@@ -60,6 +61,7 @@ export default function Home({ user, openLogin }) {
   const [pendingFilters, setPendingFilters] = useState(EMPTY_FILTERS);
 
   const { toast } = useToast();
+  const { items: recentItems, addPiece: addRecent } = useRecentlyViewed();
   const { favorites, toggleFavorite, isFavorite } = useFavorites();
   const { addToCart, isInCart } = useCart();
   const [showFavs,       setShowFavs]       = useState(false);
@@ -154,7 +156,8 @@ export default function Home({ user, openLogin }) {
   const handleOpenCard = useCallback((p) => {
     setSelectedPiece(p);
     setSelectedId(p.id);
-  }, []);
+    addRecent(p);
+  }, [addRecent]);
 
   /* ── Heart: favorito + carrito ── */
   function handleToggleFavorite(piece) {
@@ -344,6 +347,37 @@ export default function Home({ user, openLogin }) {
             <p style={{ margin: 0, color: "#6b7280", fontSize: 13 }}>
               Toca el corazón en cualquier pieza para guardarla aquí
             </p>
+          </div>
+        )}
+
+        {/* ── Visto recientemente ── */}
+        {recentItems.length > 0 && !showFavs && !query && activeCategory === "all" && (
+          <div style={st.recentWrap}>
+            <div style={st.recentHeader}>
+              <span style={st.recentTitle}>👁 Visto recientemente</span>
+            </div>
+            <div style={st.recentScroll}>
+              {recentItems.map((p) => {
+                const img = p.images?.length ? p.images[0] : null;
+                const price = p.price ? `L ${Number(p.price).toLocaleString("es-HN")}` : null;
+                return (
+                  <div
+                    key={p.id}
+                    style={{ ...st.recentCard, width: 100, flexShrink: 0,
+                      background: "#fff", border: "1px solid #e5e7eb",
+                      boxShadow: "0 1px 6px rgba(0,0,0,0.07)" }}
+                    onClick={() => handleOpenCard(p)}
+                  >
+                    {img
+                      ? <img src={img} alt={p.title} style={st.recentImg} />
+                      : <div style={{ ...st.recentNoImg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>🔩</div>
+                    }
+                    <div style={st.recentLabel}>{p.title}</div>
+                    <div style={st.recentSub}>{price || p.city || p.brand || ""}</div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
 

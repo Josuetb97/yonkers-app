@@ -128,10 +128,11 @@ export default function RequestNeed() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            title: form.title.trim(),
-            brand: form.brand?.trim() || "",
-            city:  form.city?.trim()  || "",
+            title:    form.title.trim(),
+            brand:    form.brand?.trim()    || "",
+            city:     form.city?.trim()     || "",
             whatsapp: form.whatsapp.trim(),
+            images:   imageUrls,
           }),
         });
       } catch (notifyErr) {
