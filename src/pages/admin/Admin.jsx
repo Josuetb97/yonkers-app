@@ -358,17 +358,18 @@ function ImageUploader({ files, preview, onFiles, onRemove }) {
 export default function Admin() {
   const navigate = useNavigate();
 
-  const [form,          setForm]          = useState(EMPTY_FORM);
-  const [profileLoaded, setProfileLoaded] = useState(false);
-  const [files,         setFiles]         = useState([]);
-  const [preview,       setPreview]       = useState([]);
-  const [saving,        setSaving]        = useState(false);
-  const [pieces,        setPieces]        = useState([]);
-  const [loading,       setLoading]       = useState(true);
-  const [msg,           setMsg]           = useState({ text: "", type: "" });
-  const [search,        setSearch]        = useState("");
-  const [editingId,     setEditingId]     = useState(null);
-  const [isMobile,      setIsMobile]      = useState(window.innerWidth < 640);
+  const [form,            setForm]            = useState(EMPTY_FORM);
+  const [profileLoaded,   setProfileLoaded]   = useState(false);
+  const [profileExpanded, setProfileExpanded] = useState(false); // colapsa cuando ya hay datos
+  const [files,           setFiles]           = useState([]);
+  const [preview,         setPreview]         = useState([]);
+  const [saving,          setSaving]          = useState(false);
+  const [pieces,          setPieces]          = useState([]);
+  const [loading,         setLoading]         = useState(true);
+  const [msg,             setMsg]             = useState({ text: "", type: "" });
+  const [search,          setSearch]          = useState("");
+  const [editingId,       setEditingId]       = useState(null);
+  const [isMobile,        setIsMobile]        = useState(window.innerWidth < 640);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 640);
@@ -446,6 +447,9 @@ export default function Admin() {
     if (profile) {
       setForm((f) => ({ ...f, ...profile }));
       setProfileLoaded(true);
+      setProfileExpanded(false); // colapsar si ya tiene datos
+    } else {
+      setProfileExpanded(true); // expandir si es primera vez
     }
   }
 
@@ -663,37 +667,61 @@ export default function Admin() {
 
           <form onSubmit={handleSubmit} style={st.form}>
 
-            {/* ══ PERFIL DEL YONKER (auto-rellenado) ══ */}
+            {/* ══ PERFIL DEL YONKER (auto-rellenado / colapsable) ══ */}
             <div style={st.profileSection}>
+              {/* Cabecera siempre visible */}
               <div style={st.profileHeader}>
                 <div style={st.profileIcon}>👤</div>
                 <div style={{ flex: 1 }}>
-                  <div style={st.profileTitle}>Tu perfil de yonker</div>
+                  <div style={st.profileTitle}>
+                    {profileLoaded && form.yonker
+                      ? form.yonker
+                      : "Tu perfil de yonker"}
+                  </div>
                   <div style={st.profileSub}>
                     {profileLoaded
-                      ? "✓ Datos cargados automáticamente — puedes editarlos aquí"
+                      ? `${form.city ? form.city + " · " : ""}Perfil cargado automáticamente`
                       : "Completa tu perfil una vez y se recordará siempre"}
                   </div>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => setProfileExpanded((v) => !v)}
+                  style={st.profileToggleBtn}
+                >
+                  {profileExpanded ? "Ocultar" : "Editar"}
+                  <svg
+                    width="12" height="12" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" strokeWidth="2.5"
+                    style={{ transition: "transform .2s", transform: profileExpanded ? "rotate(180deg)" : "rotate(0deg)" }}
+                  >
+                    <polyline points="6 9 12 15 18 9"/>
+                  </svg>
+                </button>
               </div>
 
-              {/* Nombre + Ciudad */}
-              <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 10 }}>
-                {PROFILE_FIELDS_CONFIG.map((field) => (
-                  <Field key={field.name} field={field} value={form[field.name]} onChange={handleChange} dimmed={profileLoaded} />
-                ))}
-              </div>
+              {/* Campos desplegables */}
+              {profileExpanded && (
+                <>
+                  {/* Nombre + Ciudad */}
+                  <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 10 }}>
+                    {PROFILE_FIELDS_CONFIG.map((field) => (
+                      <Field key={field.name} field={field} value={form[field.name]} onChange={handleChange} dimmed={false} />
+                    ))}
+                  </div>
 
-              {/* Ubicación */}
-              <LocationPicker lat={form.lat} lng={form.lng} city={form.city} onLocation={handleLocation} dimmed={profileLoaded} />
+                  {/* Ubicación */}
+                  <LocationPicker lat={form.lat} lng={form.lng} city={form.city} onLocation={handleLocation} dimmed={false} />
 
-              {/* Redes sociales */}
-              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                <label style={{ ...sc.label, color: "#94a3b8" }}>Redes sociales (opcional)</label>
-                {SOCIAL_FIELDS.map((field) => (
-                  <SocialField key={field.name} field={field} value={form[field.name]} onChange={handleChange} dimmed={profileLoaded} />
-                ))}
-              </div>
+                  {/* Redes sociales */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                    <label style={{ ...sc.label, color: "#94a3b8" }}>Redes sociales (opcional)</label>
+                    {SOCIAL_FIELDS.map((field) => (
+                      <SocialField key={field.name} field={field} value={form[field.name]} onChange={handleChange} dimmed={false} />
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
 
             {/* ══ INFORMACIÓN DE LA PIEZA ══ */}
@@ -861,6 +889,12 @@ const st = {
   profileIcon:   { width: 36, height: 36, borderRadius: 10, background: "#dcfce7", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 },
   profileTitle:  { fontSize: 14, fontWeight: 700, color: "#0f172a" },
   profileSub:    { fontSize: 11, color: "#16a34a", marginTop: 2 },
+  profileToggleBtn: {
+    flexShrink: 0, display: "flex", alignItems: "center", gap: 4,
+    padding: "5px 12px", borderRadius: 8, border: "1.5px solid #86efac",
+    background: "#fff", color: "#16a34a", fontSize: 12, fontWeight: 700,
+    cursor: "pointer", fontFamily: "system-ui, sans-serif",
+  },
 
   /* Pieza */
   stepSection: { display: "flex", flexDirection: "column", gap: 14, padding: "18px 0", borderBottom: "1px solid #f1f5f9" },
