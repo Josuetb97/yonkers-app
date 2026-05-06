@@ -362,6 +362,7 @@ export default function RequestNeed() {
                 style={{ ...st.input, backgroundColor: "#fff", cursor: "pointer" }}
               >
                 <option value="">Selecciona tu ciudad...</option>
+                <option value="todo">🇭🇳 Todo Honduras (todos los departamentos)</option>
                 <option value="Atlántida">Atlántida</option>
                 <option value="Choluteca">Choluteca</option>
                 <option value="Colón">Colón</option>
