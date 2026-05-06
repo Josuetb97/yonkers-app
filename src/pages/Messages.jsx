@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Send, Bot, User, Sparkles, ChevronRight, MapPin, Store } from "lucide-react";
 
-const API = import.meta.env.VITE_API_URL || "/api";
+const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/yonky-chat`;
 
 /* ── Sugerencias iniciales ── */
 const SUGGESTIONS = [
@@ -182,7 +182,7 @@ export default function Messages() {
     const timeout = setTimeout(() => controller.abort(), 30000);
 
     try {
-      const res = await fetch(`${API}/chat`, {
+      const res = await fetch(CHAT_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
