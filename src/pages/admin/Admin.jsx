@@ -5,7 +5,12 @@ import SellerOnboardingModal from "../../components/SellerOnboardingModal";
 import { compressImages } from "../../lib/compressImage";
 
 const PROFILE_KEY       = "yonkers_admin_profile";
-const SUPER_ADMIN_EMAIL  = "josuetb19997@gmail.com";
+// Todas las cuentas de Google/Facebook del administrador
+const SUPER_ADMIN_EMAILS = [
+  "josuetb19997@gmail.com",
+  "josuetaborab@gmail.com",
+  "josuetabora2012@gmail.com",
+];
 const NOTIFY_ADMIN_URL   = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/notify-admin-registration`;
 
 /* ─────────────────────────────────────────────────────────────
@@ -360,7 +365,7 @@ export default function Admin() {
   const [currentUser,     setCurrentUser]     = useState(null);
   const [yonkerStatus,    setYonkerStatus]    = useState(null); // null | 'pending' | 'approved' | 'rejected'
   const [rejectionReason, setRejectionReason] = useState("");
-  const isSuperAdmin = currentUser?.email === SUPER_ADMIN_EMAIL;
+  const isSuperAdmin = SUPER_ADMIN_EMAILS.includes(currentUser?.email ?? "");
 
   // Registro de nuevos yonkers
   const [regForm,     setRegForm]     = useState({ name: "", city: "", whatsapp: "", description: "" });
@@ -389,7 +394,7 @@ export default function Admin() {
       setAuthChecked(true);
       if (user) {
         await loadProfile(user);
-        if (user.email === SUPER_ADMIN_EMAIL) loadPendingYonkers();
+        if (SUPER_ADMIN_EMAILS.includes(user.email ?? "")) loadPendingYonkers();
         loadPieces(user);
       }
     })();
@@ -407,7 +412,7 @@ export default function Admin() {
   /* ── Cargar perfil y verificar estado de aprobación ── */
   async function loadProfile(user) {
     // Super-admin siempre aprobado
-    if (user?.email === SUPER_ADMIN_EMAIL) {
+    if (SUPER_ADMIN_EMAILS.includes(user?.email ?? "")) {
       setYonkerStatus("approved");
       setProfileLoaded(true);
       return;
