@@ -479,11 +479,12 @@ export default function Admin() {
 
   /* ── Cargar solicitudes pendientes (solo super-admin) ── */
   async function loadPendingYonkers() {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("yonkers")
       .select("id, name, city, whatsapp, email, status, rejection_reason, instagram, facebook, created_at")
       .in("status", ["pending", "rejected"])
-      .order("created_at", { ascending: false });
+      .order("id", { ascending: false });
+    if (error) console.error("[loadPendingYonkers]", error);
     setPendingList(data ?? []);
   }
 
