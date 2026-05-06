@@ -32,12 +32,11 @@ import { supabase } from "../lib/supabase";
 import { useCart } from "../hooks/useCart";
 import { compressImages } from "../lib/compressImage";
 
-const API    = "/api";
+// Render backend ya no se usa — vehicles migrados a Supabase
 const BLUE   = "#1e3a8a";
 const BLUEM  = "#1d4ed8";
 const YELL   = "#facc15";
 const GREEN  = "#16a34a";
-const BACKEND = import.meta.env.VITE_BACKEND_URL || "";
 
 /* ─── helpers ─── */
 function parseImages(images) {
@@ -51,9 +50,13 @@ function parseImages(images) {
   } catch { return []; }
 }
 
-async function getToken() {
-  const { data } = await supabase.auth.getSession();
-  return data?.session?.access_token || null;
+async function uploadVehicleImage(file) {
+  const ext  = file.name.split(".").pop() || "jpg";
+  const path = `vehicles/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+  const { error } = await supabase.storage.from("pieces").upload(path, file, { upsert: false });
+  if (error) throw error;
+  const { data } = supabase.storage.from("pieces").getPublicUrl(path);
+  return data.publicUrl;
 }
 
 /* ─── KPI chip ─── */
@@ -95,7 +98,7 @@ function VehicleCard({ v, onDelete, onAddToCart, inCart }) {
       {/* ── Imagen izquierda ── */}
       <div style={vc.imgCol}>
         {hasPhoto ? (
-          <img src={`${BACKEND}${imgs[0]}`} alt={v.title} style={vc.img}
+          <img src={imgs[0]} alt={v.title} style={vc.img}
             onError={(e) => { e.currentTarget.style.display = "none"; }} />
         ) : (
           <div style={vc.noImg}><Car size={26} color="#9ca3af" /></div>
@@ -211,17 +214,26 @@ function VehicleFormModal({ onClose, onSaved }) {
     setSaving(true);
     setError("");
     try {
-      const token = await getToken();
-      const fd    = new FormData();
-      Object.entries(form).forEach(([k, v]) => fd.append(k, v));
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("No autenticado");
+
+      // Subir imágenes a Supabase Storage
       const compressed = await compressImages(files);
-      compressed.forEach((f) => fd.append("images", f));
-      const res = await fetch(`${API}/vehicles`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-        body: fd,
+      const imageUrls  = [];
+      for (const f of compressed) {
+        imageUrls.push(await uploadVehicleImage(f));
+      }
+
+      const { error } = await supabase.from("vehicles").insert({
+        title:    form.title.trim(),
+        brand:    form.brand.trim()    || null,
+        year:     form.year.trim()     || null,
+        price:    form.price           ? Number(form.price) : null,
+        whatsapp: form.whatsapp.trim() || null,
+        images:   imageUrls,
+        owner_id: user.id,
       });
-      if (!res.ok) throw new Error();
+      if (error) throw error;
       onSaved();
       onClose();
     } catch {
@@ -345,11 +357,15 @@ export default function Autolote() {
   async function loadVehicles() {
     try {
       setLoading(true);
-      const token = await getToken();
-      if (!token) return;
-      const res  = await fetch(`${API}/my/vehicles`, { headers: { Authorization: `Bearer ${token}` } });
-      const data = await res.json();
-      setItems(Array.isArray(data) ? data : []);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data, error } = await supabase
+        .from("vehicles")
+        .select("*")
+        .eq("owner_id", user.id)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      setItems(data ?? []);
     } catch {
       setError("Error cargando vehículos");
     } finally {
@@ -359,12 +375,11 @@ export default function Autolote() {
 
   async function deleteItem(id) {
     if (!window.confirm("¿Eliminar este vehículo?")) return;
-    const token = await getToken();
-    const res   = await fetch(`${API}/vehicles/${id}`, {
-      method: "DELETE",
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    if (res.ok) setItems((v) => v.filter((i) => i.id !== id));
+    const { error } = await supabase
+      .from("vehicles")
+      .delete()
+      .eq("id", id);
+    if (!error) setItems((v) => v.filter((i) => i.id !== id));
   }
 
   function handleAddToCart(v) {

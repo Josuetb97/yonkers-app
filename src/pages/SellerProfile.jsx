@@ -6,8 +6,7 @@ import PieceDetailModal from "../components/modals/PieceDetailModal";
 import { useAnalytics } from "../hooks/useAnalytics";
 import { supabase } from "../lib/supabase";
 
-const API     = import.meta.env.VITE_API_URL || "/api";
-const BACKEND = import.meta.env.VITE_BACKEND_URL || "";
+// Render backend ya no se usa — reseñas migradas a Supabase
 
 /* ─────────────────────────────────────────────────────────────
    ID de sesión anónima para evitar reseñas duplicadas
@@ -34,8 +33,17 @@ function ReviewSection({ sellerId }) {
 
   const load = useCallback(async () => {
     try {
-      const data = await fetch(`${API}/reviews/${sellerId}`).then((r) => r.json());
-      setSummary(data);
+      const { data: rows, error } = await supabase
+        .from("reviews")
+        .select("id, score, comment, created_at")
+        .eq("seller_id", sellerId)
+        .order("created_at", { ascending: false })
+        .limit(50);
+      if (error) throw error;
+      const total    = rows?.length ?? 0;
+      const positive = rows?.filter((r) => r.score === 1).length ?? 0;
+      const pct      = total > 0 ? Math.round((positive / total) * 100) : null;
+      setSummary({ reviews: rows ?? [], total, positive, pct });
     } catch {
       setSummary(null);
     }
@@ -47,16 +55,18 @@ function ReviewSection({ sellerId }) {
     if (myScore === null) return;
     setSubmitting(true);
     try {
-      await fetch(`${API}/reviews`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          seller_id: sellerId,
-          score: myScore,
-          comment: comment.trim(),
-          reviewer_session: session,
-        }),
-      });
+      const { error } = await supabase
+        .from("reviews")
+        .upsert(
+          {
+            seller_id:        sellerId,
+            score:            myScore,
+            comment:          comment.trim(),
+            reviewer_session: session,
+          },
+          { onConflict: "seller_id,reviewer_session" },
+        );
+      if (error) throw error;
       setSent(true);
       setComment("");
       await load();
