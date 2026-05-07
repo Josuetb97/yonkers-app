@@ -145,17 +145,19 @@ function VehicleDetailModal({ vehicle, onClose }) {
 
           <div style={md.divider} />
 
-          {/* ── Tarjeta del autolote ── */}
-          {vehicle.autolote_name && (
+          {/* ── Tarjeta del autolote ── siempre visible si hay algo que mostrar */}
+          {(vehicle.autolote_name || vehicle.autolote_city || vehicle.whatsapp) && (
             <div style={md.autoloteCard}>
               {/* Fila superior: avatar + nombre + ciudad */}
               <div style={md.autoloteTop}>
                 <div style={md.avatar}>
-                  {vehicle.autolote_name.slice(0, 2).toUpperCase()}
+                  {(vehicle.autolote_name || "AU").slice(0, 2).toUpperCase()}
                 </div>
                 <div style={md.autoloteInfo}>
                   <div style={md.autoloteNameRow}>
-                    <span style={md.autoloteName}>{vehicle.autolote_name}</span>
+                    <span style={md.autoloteName}>
+                      {vehicle.autolote_name || "Autolote"}
+                    </span>
                     {vehicle.autolote_verified && (
                       <span style={md.verifiedBadge}>✓ Verificado</span>
                     )}
@@ -164,6 +166,11 @@ function VehicleDetailModal({ vehicle, onClose }) {
                     <div style={md.autoloteCity}>
                       <MapPin size={12} color="#6b7280" />
                       <span>{vehicle.autolote_city}</span>
+                    </div>
+                  )}
+                  {vehicle.whatsapp && (
+                    <div style={{ fontSize: 12, color: "#6b7280", marginTop: 3 }}>
+                      📞 {vehicle.whatsapp}
                     </div>
                   )}
                 </div>
@@ -559,12 +566,16 @@ const md = {
     position: "fixed", inset: 0, zIndex: 9000,
     background: "rgba(0,0,0,0.55)", backdropFilter: "blur(4px)",
     display: "flex", alignItems: "flex-end", justifyContent: "center",
+    /* Padding inferior para no quedar detrás del BottomNav */
+    paddingBottom: 60,
   },
   /* El sheet NO hace scroll — solo el body interior */
   sheet: {
     background: "#fff", borderRadius: "22px 22px 0 0",
-    width: "100%", maxWidth: 560, maxHeight: "92vh",
-    overflow: "hidden",                          /* ← sin scroll en el sheet */
+    width: "100%", maxWidth: 560,
+    /* Máximo hasta donde empieza el BottomNav (60px) + margen */
+    maxHeight: "calc(92vh - 60px)",
+    overflow: "hidden",
     display: "flex", flexDirection: "column",
     boxShadow: "0 -8px 40px rgba(0,0,0,0.18)",
   },
