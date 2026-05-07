@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, useRef, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { Plus, Trash2, X, Search, Car, DollarSign, Eye, CheckCircle } from "lucide-react";
 
 /* ─── Section title (igual que Solicitar) ─── */
@@ -342,17 +343,53 @@ function VehicleFormModal({ onClose, onSaved }) {
 /* ─────────────────────────────────────────────────────────────
    MAIN — MI AUTOLOTE
 ───────────────────────────────────────────────────────────── */
+const SUPER_ADMIN_EMAILS = [
+  "josuetb19997@gmail.com",
+  "josuetaborab@gmail.com",
+  "josuetabora2012@gmail.com",
+];
+
 export default function Autolote() {
+  const navigate = useNavigate();
   const { addToCart, isInCart } = useCart();
 
-  const [items,    setItems]    = useState([]);
-  const [loading,  setLoading]  = useState(true);
-  const [error,    setError]    = useState("");
-  const [search,   setSearch]   = useState("");
-  const [showForm, setShowForm] = useState(false);
-  const [toast,    setToast]    = useState("");
+  const [items,       setItems]       = useState([]);
+  const [loading,     setLoading]     = useState(true);
+  const [error,       setError]       = useState("");
+  const [search,      setSearch]      = useState("");
+  const [showForm,    setShowForm]    = useState(false);
+  const [toast,       setToast]       = useState("");
 
-  useEffect(() => { loadVehicles(); }, []);
+  // Control de acceso
+  const [authChecked, setAuthChecked] = useState(false);
+  const [autoloteStatus, setAutoloteStatus] = useState(null); // null | 'pending' | 'approved' | 'rejected'
+
+  useEffect(() => {
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { setAuthChecked(true); return; }
+
+      // Super-admin siempre tiene acceso
+      if (SUPER_ADMIN_EMAILS.includes(user.email ?? "")) {
+        setAutoloteStatus("approved");
+        setAuthChecked(true);
+        loadVehicles();
+        return;
+      }
+
+      // Verificar si tiene perfil de autolote aprobado
+      const { data } = await supabase
+        .from("autolote_profiles")
+        .select("status")
+        .eq("owner_id", user.id)
+        .maybeSingle();
+
+      const st = data?.status ?? null;
+      setAutoloteStatus(st);
+      setAuthChecked(true);
+      if (st === "approved") loadVehicles();
+    })();
+  }, []);
 
   async function loadVehicles() {
     try {
@@ -408,8 +445,27 @@ export default function Autolote() {
   }, [items, search]);
 
   /* KPIs */
-  const totalValue   = items.reduce((s, v) => s + Number(v.price || 0), 0);
-  const withPhotos   = items.filter((v) => parseImages(v.images).length > 0).length;
+  const totalValue = items.reduce((s, v) => s + Number(v.price || 0), 0);
+  const withPhotos = items.filter((v) => parseImages(v.images).length > 0).length;
+
+  /* ── Pantalla: verificando acceso ── */
+  if (!authChecked) {
+    return (
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#f7f8fa" }}>
+        <div style={{ textAlign: "center" }}>
+          <div style={{ width: 36, height: 36, border: "3px solid #e2e8f0", borderTopColor: "#1e3a8a", borderRadius: "50%", animation: "spin 0.8s linear infinite", margin: "0 auto 12px" }} />
+          <div style={{ color: "#64748b", fontSize: 14 }}>Verificando acceso…</div>
+        </div>
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
+    );
+  }
+
+  /* ── Sin aprobación → redirigir a /autolote-solicitud ── */
+  if (autoloteStatus !== "approved") {
+    navigate("/autolote-solicitud", { replace: true });
+    return null;
+  }
 
   return (
     <div style={pg.page}>

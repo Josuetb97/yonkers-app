@@ -11,7 +11,6 @@ const SUPER_ADMIN_EMAILS = [
   "josuetaborab@gmail.com",
   "josuetabora2012@gmail.com",
 ];
-const NOTIFY_ADMIN_URL   = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/notify-admin-registration`;
 
 /* ─────────────────────────────────────────────────────────────
    FIELD CONFIG
@@ -367,16 +366,17 @@ export default function Admin() {
   const [rejectionReason, setRejectionReason] = useState("");
   const isSuperAdmin = SUPER_ADMIN_EMAILS.includes(currentUser?.email ?? "");
 
-  // Registro de nuevos yonkers
-  const [regForm,     setRegForm]     = useState({ name: "", city: "", whatsapp: "", description: "" });
-  const [regSaving,   setRegSaving]   = useState(false);
-  const [regMsg,      setRegMsg]      = useState("");
+  // (registro movido a /unirse)
 
-  // Panel super-admin
-  const [pendingList,   setPendingList]   = useState([]);
-  const [adminView,     setAdminView]     = useState("pieces"); // 'pieces' | 'solicitudes'
-  const [rejectId,      setRejectId]      = useState(null);
-  const [rejectReason,  setRejectReason]  = useState("");
+  // Panel super-admin — Yonkers
+  const [pendingList,      setPendingList]      = useState([]);
+  const [adminView,        setAdminView]        = useState("pieces"); // 'pieces' | 'solicitudes' | 'autolotes'
+  const [rejectId,         setRejectId]         = useState(null);
+  const [rejectReason,     setRejectReason]     = useState("");
+  // Panel super-admin — Autolotes
+  const [autoloteList,     setAutoloteList]     = useState([]);
+  const [rejectAutoloteId, setRejectAutoloteId] = useState(null);
+  const [rejectAutoloteReason, setRejectAutoloteReason] = useState("");
   const [isMobile,        setIsMobile]        = useState(window.innerWidth < 640);
 
   useEffect(() => {
@@ -394,7 +394,10 @@ export default function Admin() {
       setAuthChecked(true);
       if (user) {
         await loadProfile(user);
-        if (SUPER_ADMIN_EMAILS.includes(user.email ?? "")) loadPendingYonkers();
+        if (SUPER_ADMIN_EMAILS.includes(user.email ?? "")) {
+          loadPendingYonkers();
+          loadPendingAutolotes();
+        }
         loadPieces(user);
       }
     })();
@@ -481,11 +484,21 @@ export default function Admin() {
   async function loadPendingYonkers() {
     const { data, error } = await supabase
       .from("yonkers")
-      .select("id, name, city, whatsapp, email, status, rejection_reason, instagram, facebook, created_at")
+      .select("id, name, city, whatsapp, email, status, rejection_reason, instagram, facebook, verified, created_at")
       .in("status", ["pending", "rejected"])
       .order("id", { ascending: false });
     if (error) console.error("[loadPendingYonkers]", error);
     setPendingList(data ?? []);
+  }
+
+  /* ── Helper: registrar acción en audit log ── */
+  async function auditLog(action, targetType, targetId, details = {}) {
+    await supabase.rpc("log_admin_action", {
+      p_action:      action,
+      p_target_type: targetType,
+      p_target_id:   String(targetId),
+      p_details:     details,
+    }).catch(() => {});
   }
 
   /* ── Aprobar yonker (super-admin) ── */
@@ -494,7 +507,7 @@ export default function Admin() {
       .from("yonkers")
       .update({ status: "approved", rejection_reason: "" })
       .eq("id", id);
-    if (!error) loadPendingYonkers();
+    if (!error) { await auditLog("approve_yonker", "yonker", id); loadPendingYonkers(); }
   }
 
   /* ── Rechazar yonker (super-admin) ── */
@@ -503,52 +516,60 @@ export default function Admin() {
       .from("yonkers")
       .update({ status: "rejected", rejection_reason: reason || "No cumple los requisitos." })
       .eq("id", id);
-    if (!error) { loadPendingYonkers(); setRejectId(null); setRejectReason(""); }
+    if (!error) {
+      await auditLog("reject_yonker", "yonker", id, { reason });
+      loadPendingYonkers(); setRejectId(null); setRejectReason("");
+    }
   }
 
-  /* ── Registrar nuevo yonker (solicitud) ── */
-  async function submitRegistration(e) {
-    e.preventDefault();
-    if (!regForm.name.trim() || !regForm.whatsapp.trim()) {
-      setRegMsg("El nombre y WhatsApp son obligatorios.");
-      return;
+  /* ── Verificar yonker (super-admin) — badge de confianza ── */
+  async function verifyYonker(id) {
+    const { error } = await supabase
+      .from("yonkers")
+      .update({ verified: true })
+      .eq("id", id);
+    if (!error) { await auditLog("verify_yonker", "yonker", id); loadPendingYonkers(); }
+  }
+
+  /* ── Cargar solicitudes de autolotes pendientes (super-admin) ── */
+  async function loadPendingAutolotes() {
+    const { data, error } = await supabase
+      .from("autolote_profiles")
+      .select("id, name, city, whatsapp, email, status, rejection_reason, instagram, facebook, verified, created_at")
+      .in("status", ["pending", "rejected"])
+      .order("id", { ascending: false });
+    if (error) console.error("[loadPendingAutolotes]", error);
+    setAutoloteList(data ?? []);
+  }
+
+  /* ── Aprobar autolote (super-admin) ── */
+  async function approveAutolote(id) {
+    const { error } = await supabase
+      .from("autolote_profiles")
+      .update({ status: "approved", rejection_reason: "" })
+      .eq("id", id);
+    if (!error) { await auditLog("approve_autolote", "autolote", id); loadPendingAutolotes(); }
+  }
+
+  /* ── Rechazar autolote (super-admin) ── */
+  async function rejectAutolote(id, reason) {
+    const { error } = await supabase
+      .from("autolote_profiles")
+      .update({ status: "rejected", rejection_reason: reason || "No cumple los requisitos." })
+      .eq("id", id);
+    if (!error) {
+      await auditLog("reject_autolote", "autolote", id, { reason });
+      loadPendingAutolotes(); setRejectAutoloteId(null); setRejectAutoloteReason("");
     }
-    setRegSaving(true);
-    setRegMsg("");
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("No hay sesión activa.");
+  }
 
-      const { error } = await supabase.from("yonkers").insert({
-        owner_id:    user.id,
-        email:       user.email ?? "",
-        name:        regForm.name.trim(),
-        city:        regForm.city.trim(),
-        whatsapp:    regForm.whatsapp.replace(/\D/g, ""),
-        status:      "pending",
-        active:      false,
-      });
-      if (error) throw error;
-
-      // Notificar al admin por email (sin esperar respuesta — no bloquea)
-      fetch(NOTIFY_ADMIN_URL, {
-        method:  "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name:        regForm.name.trim(),
-          city:        regForm.city.trim(),
-          whatsapp:    regForm.whatsapp.replace(/\D/g, ""),
-          email:       user.email ?? "",
-          description: regForm.description.trim(),
-        }),
-      }).catch(() => {}); // ignorar errores de notificación
-
-      setYonkerStatus("pending");
-    } catch (err) {
-      setRegMsg(err.message || "Error enviando solicitud.");
-    } finally {
-      setRegSaving(false);
-    }
+  /* ── Verificar autolote (super-admin) ── */
+  async function verifyAutolote(id) {
+    const { error } = await supabase
+      .from("autolote_profiles")
+      .update({ verified: true })
+      .eq("id", id);
+    if (!error) { await auditLog("verify_autolote", "autolote", id); loadPendingAutolotes(); }
   }
 
   const filteredPieces = useMemo(
@@ -745,103 +766,10 @@ export default function Admin() {
     );
   }
 
-  /* ── Pantalla: formulario de registro (nuevo yonker) ── */
-  if (yonkerStatus === null && !isSuperAdmin) {
-    return (
-      <div style={{ minHeight: "100vh", background: "#f8fafc", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-        <div style={{ width: "100%", maxWidth: 420, background: "#fff", borderRadius: 16, boxShadow: "0 4px 24px rgba(0,0,0,0.08)", padding: 28 }}>
-          <div style={{ textAlign: "center", marginBottom: 24 }}>
-            <div style={{ fontSize: 40, marginBottom: 8 }}>🏪</div>
-            <div style={{ fontSize: 20, fontWeight: 800, color: "#0f172a" }}>Solicita tu acceso de Yonker</div>
-            <div style={{ fontSize: 13, color: "#64748b", marginTop: 6 }}>Completa el formulario — revisaremos tu solicitud y te activaremos pronto</div>
-          </div>
-
-          {regMsg && (
-            <div style={{ background: "#fef2f2", border: "1px solid #fca5a5", color: "#991b1b", borderRadius: 8, padding: "10px 14px", fontSize: 13, marginBottom: 16 }}>
-              {regMsg}
-            </div>
-          )}
-
-          <form onSubmit={submitRegistration} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-            <div>
-              <label style={{ fontSize: 12, fontWeight: 600, color: "#374151", display: "block", marginBottom: 4 }}>Nombre de tu yonker / negocio <span style={{ color: "#ef4444" }}>*</span></label>
-              <input value={regForm.name} onChange={(e) => setRegForm((f) => ({ ...f, name: e.target.value }))}
-                placeholder="Ej: DyM Yonker SPS" required
-                style={{ width: "100%", padding: "10px 12px", borderRadius: 9, border: "1.5px solid #e2e8f0", fontSize: 14, boxSizing: "border-box" }} />
-            </div>
-            <div>
-              <label style={{ fontSize: 12, fontWeight: 600, color: "#374151", display: "block", marginBottom: 4 }}>Ciudad / Departamento</label>
-              <input value={regForm.city} onChange={(e) => setRegForm((f) => ({ ...f, city: e.target.value }))}
-                placeholder="Ej: San Pedro Sula"
-                style={{ width: "100%", padding: "10px 12px", borderRadius: 9, border: "1.5px solid #e2e8f0", fontSize: 14, boxSizing: "border-box" }} />
-            </div>
-            <div>
-              <label style={{ fontSize: 12, fontWeight: 600, color: "#374151", display: "block", marginBottom: 4 }}>WhatsApp (con código de país) <span style={{ color: "#ef4444" }}>*</span></label>
-              <input value={regForm.whatsapp} onChange={(e) => setRegForm((f) => ({ ...f, whatsapp: e.target.value }))}
-                placeholder="504XXXXXXXX" required type="tel"
-                style={{ width: "100%", padding: "10px 12px", borderRadius: 9, border: "1.5px solid #e2e8f0", fontSize: 14, boxSizing: "border-box" }} />
-            </div>
-            <div>
-              <label style={{ fontSize: 12, fontWeight: 600, color: "#374151", display: "block", marginBottom: 4 }}>Cuéntanos sobre tu negocio (opcional)</label>
-              <textarea value={regForm.description} onChange={(e) => setRegForm((f) => ({ ...f, description: e.target.value }))}
-                placeholder="¿Qué tipo de piezas vendes? ¿Cuánto tiempo llevas en el negocio?"
-                rows={3}
-                style={{ width: "100%", padding: "10px 12px", borderRadius: 9, border: "1.5px solid #e2e8f0", fontSize: 14, resize: "vertical", boxSizing: "border-box", fontFamily: "system-ui,sans-serif" }} />
-            </div>
-            <button type="submit" disabled={regSaving}
-              style={{ background: "#2563eb", color: "#fff", border: "none", borderRadius: 10, padding: "12px 0", fontSize: 15, fontWeight: 700, cursor: regSaving ? "not-allowed" : "pointer", opacity: regSaving ? 0.7 : 1 }}>
-              {regSaving ? "Enviando…" : "📨 Enviar solicitud"}
-            </button>
-          </form>
-
-          <button onClick={() => navigate("/")} style={{ width: "100%", marginTop: 10, background: "transparent", border: "none", color: "#64748b", fontSize: 13, cursor: "pointer", padding: "8px 0" }}>
-            ← Volver al inicio
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  /* ── Pantalla: solicitud pendiente ── */
-  if (yonkerStatus === "pending" && !isSuperAdmin) {
-    return (
-      <div style={{ minHeight: "100vh", background: "#f8fafc", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-        <div style={{ width: "100%", maxWidth: 400, background: "#fff", borderRadius: 16, boxShadow: "0 4px 24px rgba(0,0,0,0.08)", padding: 32, textAlign: "center" }}>
-          <div style={{ fontSize: 48, marginBottom: 12 }}>⏳</div>
-          <div style={{ fontSize: 20, fontWeight: 800, color: "#0f172a", marginBottom: 8 }}>Solicitud en revisión</div>
-          <div style={{ fontSize: 13, color: "#64748b", lineHeight: 1.6 }}>
-            Tu solicitud fue enviada correctamente.<br />
-            La revisaremos y te activaremos pronto.<br />
-            <strong>Normalmente tardamos menos de 24 horas.</strong>
-          </div>
-          <button onClick={() => navigate("/")} style={{ marginTop: 24, background: "#f1f5f9", border: "none", borderRadius: 10, padding: "10px 24px", fontSize: 14, fontWeight: 600, color: "#374151", cursor: "pointer" }}>
-            ← Volver al inicio
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  /* ── Pantalla: solicitud rechazada ── */
-  if (yonkerStatus === "rejected" && !isSuperAdmin) {
-    return (
-      <div style={{ minHeight: "100vh", background: "#f8fafc", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-        <div style={{ width: "100%", maxWidth: 400, background: "#fff", borderRadius: 16, boxShadow: "0 4px 24px rgba(0,0,0,0.08)", padding: 32, textAlign: "center" }}>
-          <div style={{ fontSize: 48, marginBottom: 12 }}>❌</div>
-          <div style={{ fontSize: 20, fontWeight: 800, color: "#0f172a", marginBottom: 8 }}>Solicitud rechazada</div>
-          {rejectionReason && (
-            <div style={{ background: "#fef2f2", border: "1px solid #fca5a5", borderRadius: 10, padding: "12px 16px", fontSize: 13, color: "#991b1b", margin: "12px 0", textAlign: "left" }}>
-              <strong>Motivo:</strong> {rejectionReason}
-            </div>
-          )}
-          <div style={{ fontSize: 13, color: "#64748b" }}>Si crees que es un error, contacta al administrador.</div>
-          <button onClick={() => navigate("/")} style={{ marginTop: 24, background: "#f1f5f9", border: "none", borderRadius: 10, padding: "10px 24px", fontSize: 14, fontWeight: 600, color: "#374151", cursor: "pointer" }}>
-            ← Volver al inicio
-          </button>
-        </div>
-      </div>
-    );
+  /* ── Sin aprobación → redirigir a /unirse ── */
+  if (!isSuperAdmin && (yonkerStatus === null || yonkerStatus === "pending" || yonkerStatus === "rejected")) {
+    navigate("/unirse", { replace: true });
+    return null;
   }
 
   return (
@@ -871,10 +799,20 @@ export default function Admin() {
             <button onClick={() => { setAdminView("solicitudes"); loadPendingYonkers(); }} type="button"
               style={{ position: "relative", padding: "8px 18px", borderRadius: 8, border: "none", fontWeight: 700, fontSize: 13, cursor: "pointer",
                 background: adminView === "solicitudes" ? "#2563eb" : "#f1f5f9", color: adminView === "solicitudes" ? "#fff" : "#374151" }}>
-              🧾 Solicitudes
+              🧾 Yonkers
               {pendingList.filter(y => y.status === "pending").length > 0 && (
                 <span style={{ position: "absolute", top: -6, right: -6, background: "#ef4444", color: "#fff", borderRadius: "50%", width: 18, height: 18, fontSize: 10, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>
                   {pendingList.filter(y => y.status === "pending").length}
+                </span>
+              )}
+            </button>
+            <button onClick={() => { setAdminView("autolotes"); loadPendingAutolotes(); }} type="button"
+              style={{ position: "relative", padding: "8px 18px", borderRadius: 8, border: "none", fontWeight: 700, fontSize: 13, cursor: "pointer",
+                background: adminView === "autolotes" ? "#2563eb" : "#f1f5f9", color: adminView === "autolotes" ? "#fff" : "#374151" }}>
+              🚗 Autolotes
+              {autoloteList.filter(a => a.status === "pending").length > 0 && (
+                <span style={{ position: "absolute", top: -6, right: -6, background: "#ef4444", color: "#fff", borderRadius: "50%", width: 18, height: 18, fontSize: 10, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  {autoloteList.filter(a => a.status === "pending").length}
                 </span>
               )}
             </button>
@@ -935,6 +873,17 @@ export default function Admin() {
                       style={{ padding: "8px 18px", background: "#16a34a", color: "#fff", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
                       ✅ Aprobar
                     </button>
+                    {y.status === "approved" && !y.verified && (
+                      <button onClick={() => verifyYonker(y.id)} type="button"
+                        style={{ padding: "8px 18px", background: "#7c3aed", color: "#fff", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+                        🛡️ Verificar
+                      </button>
+                    )}
+                    {y.verified && (
+                      <span style={{ padding: "8px 14px", background: "#ede9fe", color: "#7c3aed", borderRadius: 8, fontSize: 13, fontWeight: 700 }}>
+                        🛡️ Verificado
+                      </span>
+                    )}
                     <button onClick={() => { setRejectId(y.id); setRejectReason(""); }} type="button"
                       style={{ padding: "8px 18px", background: "#fef2f2", color: "#ef4444", border: "1px solid #fca5a5", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
                       ❌ Rechazar
@@ -953,7 +902,89 @@ export default function Admin() {
           </div>
         )}
 
-        {/* ══ Panel de piezas (yonker normal o super-admin en vista pieces) ══ */}
+        {/* ══ PANEL DE SOLICITUDES AUTOLOTES (super-admin) ══ */}
+        {isSuperAdmin && adminView === "autolotes" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            {autoloteList.length === 0 && (
+              <div style={{ background: "#fff", borderRadius: 14, padding: 32, textAlign: "center", color: "#94a3b8", fontSize: 14 }}>
+                No hay solicitudes de autolotes pendientes 🎉
+              </div>
+            )}
+            {autoloteList.map((a) => (
+              <div key={a.id} style={{ background: "#fff", borderRadius: 14, border: "1px solid #e2e8f0", padding: 18, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 8 }}>
+                  <div>
+                    <div style={{ fontWeight: 800, fontSize: 16, color: "#0f172a" }}>{a.name}</div>
+                    <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>
+                      {[a.city, a.whatsapp && `📱 ${a.whatsapp}`, a.email && `✉️ ${a.email}`].filter(Boolean).join("  ·  ")}
+                    </div>
+                    {a.instagram && <div style={{ fontSize: 12, color: "#64748b" }}>IG: {a.instagram}</div>}
+                  </div>
+                  <span style={{ padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 700,
+                    background: a.status === "pending" ? "#fef9c3" : "#fee2e2",
+                    color: a.status === "pending" ? "#854d0e" : "#991b1b" }}>
+                    {a.status === "pending" ? "⏳ Pendiente" : "❌ Rechazado"}
+                  </span>
+                </div>
+
+                {a.rejection_reason && (
+                  <div style={{ marginTop: 8, fontSize: 12, color: "#991b1b", background: "#fef2f2", borderRadius: 7, padding: "6px 10px" }}>
+                    Motivo rechazo: {a.rejection_reason}
+                  </div>
+                )}
+
+                {rejectAutoloteId === a.id && (
+                  <div style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    <input value={rejectAutoloteReason} onChange={(e) => setRejectAutoloteReason(e.target.value)}
+                      placeholder="Motivo del rechazo (opcional)"
+                      style={{ flex: 1, minWidth: 180, padding: "8px 10px", borderRadius: 8, border: "1.5px solid #fca5a5", fontSize: 13 }} />
+                    <button onClick={() => rejectAutolote(a.id, rejectAutoloteReason)} type="button"
+                      style={{ padding: "8px 14px", background: "#ef4444", color: "#fff", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+                      Confirmar rechazo
+                    </button>
+                    <button onClick={() => setRejectAutoloteId(null)} type="button"
+                      style={{ padding: "8px 14px", background: "#f1f5f9", color: "#374151", border: "none", borderRadius: 8, fontSize: 13, cursor: "pointer" }}>
+                      Cancelar
+                    </button>
+                  </div>
+                )}
+
+                {rejectAutoloteId !== a.id && (
+                  <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
+                    <button onClick={() => approveAutolote(a.id)} type="button"
+                      style={{ padding: "8px 18px", background: "#16a34a", color: "#fff", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+                      ✅ Aprobar
+                    </button>
+                    {a.status === "approved" && !a.verified && (
+                      <button onClick={() => verifyAutolote(a.id)} type="button"
+                        style={{ padding: "8px 18px", background: "#7c3aed", color: "#fff", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+                        🛡️ Verificar
+                      </button>
+                    )}
+                    {a.verified && (
+                      <span style={{ padding: "8px 14px", background: "#ede9fe", color: "#7c3aed", borderRadius: 8, fontSize: 13, fontWeight: 700 }}>
+                        🛡️ Verificado
+                      </span>
+                    )}
+                    <button onClick={() => { setRejectAutoloteId(a.id); setRejectAutoloteReason(""); }} type="button"
+                      style={{ padding: "8px 18px", background: "#fef2f2", color: "#ef4444", border: "1px solid #fca5a5", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+                      ❌ Rechazar
+                    </button>
+                    {a.whatsapp && (
+                      <a href={`https://wa.me/${a.whatsapp}?text=Hola ${encodeURIComponent(a.name)}, ya revisamos tu solicitud en Yonkers App.`}
+                        target="_blank" rel="noopener noreferrer"
+                        style={{ padding: "8px 18px", background: "#25D366", color: "#fff", borderRadius: 8, fontSize: 13, fontWeight: 700, textDecoration: "none" }}>
+                        💬 WhatsApp
+                      </a>
+                    )}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* ══ Panel de piezas (yonker normal o super-admin en vista "pieces") ══ */}
         {(!isSuperAdmin || adminView === "pieces") && (<>
 
         {/* ══ KPI STRIP ══ */}

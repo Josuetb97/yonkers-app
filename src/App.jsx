@@ -13,6 +13,8 @@ import MainLayout from "./layouts/MainLayout";
 import Home from "./pages/Home";
 import BottomNav from "./components/BottomNav";
 import Admin from "./pages/admin/Admin";
+import SolicitudYonker from "./pages/SolicitudYonker";
+import SolicitudAutolote from "./pages/SolicitudAutolote";
 import RequestNeed from "./pages/RequestNeed";
 import MyPieces from "./pages/MyPieces";
 import SellerProfile from "./pages/SellerProfile";
@@ -146,6 +148,16 @@ function AppRoutes({ tab, setTab, showBottomNav, user, loading, openLogin, cartC
             <BackHeader title="Perfil del yonker" />
             <SellerProfile user={user} openLogin={openLogin} />
           </MainLayout>
+        } />
+
+        {/* SOLICITUD YONKER */}
+        <Route path="/unirse" element={
+          <SolicitudYonker user={user} openLogin={() => setLoginOpen(true)} />
+        } />
+
+        {/* SOLICITUD AUTOLOTE */}
+        <Route path="/autolote-solicitud" element={
+          <SolicitudAutolote user={user} openLogin={() => setLoginOpen(true)} />
         } />
 
         <Route path="/login"    element={<Navigate to="/" replace />} />

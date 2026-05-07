@@ -106,6 +106,9 @@ export default function RequestNeed() {
         }
       }
 
+      // Obtener usuario autenticado para el owner_id (exigido por RLS)
+      const { data: { user } } = await supabase.auth.getUser();
+
       const { data: inserted, error: insertError } = await supabase
         .from("requests")
         .insert([{
@@ -116,6 +119,7 @@ export default function RequestNeed() {
           description: form.description?.trim() || "",
           whatsapp:    form.whatsapp.trim(),
           images:      imageUrls,
+          owner_id:    user?.id ?? null,
         }])
         .select()
         .single();
