@@ -17,6 +17,7 @@ import SolicitudYonker from "./pages/SolicitudYonker";
 import SolicitudAutolote from "./pages/SolicitudAutolote";
 import RequestNeed from "./pages/RequestNeed";
 import MyPieces from "./pages/MyPieces";
+import Autos from "./pages/Autos";
 import SellerProfile from "./pages/SellerProfile";
 import Messages from "./pages/Messages";
 import LoginModal from "./components/modals/LoginModal";
@@ -31,6 +32,14 @@ import NotificationPrompt from "./components/NotificationPrompt";
 
 /* --- Tab order para calcular dirección de la animación --- */
 const TAB_ORDER = ["inicio", "solicitar", "mensajes", "autolote"];
+
+/* Rutas que corresponden a cada tab */
+const TAB_ROUTES = {
+  inicio:    "/",
+  solicitar: "/request",
+  mensajes:  "/messages",
+  autolote:  "/autos",
+};
 
 /* --- Rutas que no son "home" y muestran el back header --- */
 const SUB_PAGES = ["/request", "/my-pieces", "/messages", "/seller"];
@@ -73,13 +82,22 @@ function AppRoutes({ tab, setTab, showBottomNav, user, loading, openLogin, cartC
 
     if (t === "inicio")    navigate("/");
     if (t === "solicitar") { if (!user) return openLogin(); navigate("/request"); }
-    if (t === "autolote")  { if (!user) return openLogin(); navigate("/my-pieces"); }
+    if (t === "autolote")  navigate("/autos");   // página pública — no requiere login
     if (t === "mensajes")  navigate("/messages");
     if (t === "carrito")   { onCartOpen(); return; }
   }
 
   // ¿Estamos en una sub-página?
   const isSubPage = SUB_PAGES.some((p) => location.pathname.startsWith(p));
+
+  // Sincronizar tab activo al navegar por URL directamente
+  useEffect(() => {
+    const path = location.pathname;
+    if (path === "/")         setTab("inicio");
+    else if (path === "/request") setTab("solicitar");
+    else if (path === "/autos")   setTab("autolote");
+    else if (path === "/messages") setTab("mensajes");
+  }, [location.pathname, setTab]);
 
   // Dirección "forward" al entrar a sub-página, "back" al salir
   useEffect(() => {
@@ -115,7 +133,17 @@ function AppRoutes({ tab, setTab, showBottomNav, user, loading, openLogin, cartC
           </ProtectedRoute>
         } />
 
-        {/* MIS PIEZAS */}
+        {/* AUTOS — listado público de vehículos de autolotes */}
+        <Route path="/autos" element={
+          <MainLayout>
+            <Autos user={user} />
+            {showBottomNav && (
+              <BottomNav active="autolote" onChange={handleTabChange} cartCount={cartCount} />
+            )}
+          </MainLayout>
+        } />
+
+        {/* MI AUTOLOTE — panel privado para autolotes aprobados */}
         <Route path="/my-pieces" element={
           <ProtectedRoute user={user} loading={loading}>
             <MainLayout>
