@@ -234,33 +234,70 @@ function VehicleDetailModal({ vehicle, onClose }) {
 }
 
 /* ════════════════════════════════════════════════════════
-   VEHICLE CARD (grilla pública — clickeable)
+   VEHICLE CARD — con carrusel de imágenes táctil
 ════════════════════════════════════════════════════════ */
 function VehicleCard({ v, onClick }) {
   const imgs = parseImages(v.images);
+  const [idx, setIdx] = useState(0);
+  const touchStartX = useRef(null);
+
+  /* Swipe táctil */
+  function onTouchStart(e) { touchStartX.current = e.touches[0].clientX; }
+  function onTouchEnd(e) {
+    if (touchStartX.current === null) return;
+    const diff = touchStartX.current - e.changedTouches[0].clientX;
+    if (Math.abs(diff) < 30) return; // threshold mínimo
+    if (diff > 0 && idx < imgs.length - 1) setIdx((i) => i + 1); // swipe izquierda → siguiente
+    if (diff < 0 && idx > 0)              setIdx((i) => i - 1); // swipe derecha → anterior
+    touchStartX.current = null;
+  }
+
+  /* Flechas — detienen propagación para no abrir el modal */
+  function prev(e) { e.stopPropagation(); setIdx((i) => Math.max(0, i - 1)); }
+  function next(e) { e.stopPropagation(); setIdx((i) => Math.min(imgs.length - 1, i + 1)); }
 
   return (
     <div style={vc.card} onClick={() => onClick(v)} role="button" tabIndex={0}
       onKeyDown={(e) => e.key === "Enter" && onClick(v)}>
-      <div style={vc.imgWrap}>
-        {imgs[0] ? (
-          <img src={imgs[0]} alt={v.title} style={vc.img}
+
+      {/* ── Carrusel ── */}
+      <div style={vc.imgWrap}
+        onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+
+        {imgs.length > 0 ? (
+          <img src={imgs[idx]} alt={v.title} style={vc.img}
             onError={(e) => { e.currentTarget.style.display = "none"; }} />
         ) : (
           <div style={vc.noImg}><Car size={28} color="#9ca3af" /></div>
         )}
-        {imgs.length > 1 && (
-          <div style={vc.photoBadge}>+{imgs.length - 1}</div>
+
+        {/* Flechas de navegación (solo si hay más de 1 imagen) */}
+        {imgs.length > 1 && idx > 0 && (
+          <button style={{ ...vc.arrow, left: 6 }} onClick={prev} aria-label="Anterior">‹</button>
         )}
+        {imgs.length > 1 && idx < imgs.length - 1 && (
+          <button style={{ ...vc.arrow, right: 6 }} onClick={next} aria-label="Siguiente">›</button>
+        )}
+
+        {/* Puntos indicadores */}
+        {imgs.length > 1 && (
+          <div style={vc.dots}>
+            {imgs.map((_, i) => (
+              <div key={i} style={{ ...vc.dot, ...(i === idx ? vc.dotActive : {}) }} />
+            ))}
+          </div>
+        )}
+
         <div style={vc.availBadge}>Disponible</div>
       </div>
 
+      {/* ── Info ── */}
       <div style={vc.body}>
         <div style={vc.title}>{v.title}</div>
         {(v.brand || v.year) && (
           <div style={vc.meta}>{[v.brand, v.year].filter(Boolean).join(" · ")}</div>
         )}
-        {v.autolote_name && (
+        {(v.autolote_name || v.autolote_city) && (
           <div style={vc.lotRow}>
             <MapPin size={10} color="#9ca3af" />
             <span style={vc.lotText}>
@@ -698,18 +735,42 @@ const vc = {
     transition: "transform 0.15s, box-shadow 0.15s",
   },
   imgWrap: {
-    position: "relative", width: "100%", height: 140,
+    position: "relative", width: "100%", height: 150,
     background: "#f3f4f6", overflow: "hidden", flexShrink: 0,
+    userSelect: "none",
   },
-  img:   { width: "100%", height: "100%", objectFit: "cover", display: "block" },
+  img: {
+    width: "100%", height: "100%", objectFit: "cover", display: "block",
+    transition: "opacity 0.15s",
+    pointerEvents: "none",   /* evita que el drag de imagen interfiera con el swipe */
+  },
   noImg: { width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" },
-  photoBadge: {
-    position: "absolute", bottom: 6, right: 6,
-    background: "rgba(0,0,0,0.6)", color: "#fff",
-    fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 7,
+  /* Flechas de navegación */
+  arrow: {
+    position: "absolute", top: "50%", transform: "translateY(-50%)",
+    width: 26, height: 26, borderRadius: "50%",
+    background: "rgba(0,0,0,0.45)", border: "none",
+    color: "#fff", fontSize: 18, fontWeight: 700,
+    display: "flex", alignItems: "center", justifyContent: "center",
+    cursor: "pointer", lineHeight: 1, padding: 0,
+    zIndex: 2,
+  },
+  /* Puntos indicadores */
+  dots: {
+    position: "absolute", bottom: 7, left: 0, right: 0,
+    display: "flex", justifyContent: "center", gap: 4, zIndex: 2,
+  },
+  dot: {
+    width: 5, height: 5, borderRadius: "50%",
+    background: "rgba(255,255,255,0.5)",
+    transition: "background 0.2s, transform 0.2s",
+  },
+  dotActive: {
+    background: "#fff",
+    transform: "scale(1.3)",
   },
   availBadge: {
-    position: "absolute", top: 6, left: 6,
+    position: "absolute", top: 7, left: 7, zIndex: 2,
     background: "#dcfce7", color: "#16a34a",
     fontSize: 9, fontWeight: 700, padding: "2px 7px", borderRadius: 7,
   },
@@ -720,11 +781,11 @@ const vc = {
   title:  { fontSize: 13, fontWeight: 700, color: "#111827", lineHeight: 1.3 },
   meta:   { fontSize: 11, color: "#6b7280" },
   lotRow: { display: "flex", alignItems: "center", gap: 3 },
-  lotText:{ fontSize: 10, color: "#9ca3af", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
+  lotText: { fontSize: 10, color: "#9ca3af", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
   priceRow: { display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 4 },
-  price:  { fontSize: 14, fontWeight: 800, color: "#1e3a8a" },
-  priceNA:{ fontSize: 11, color: "#9ca3af", fontStyle: "italic" },
-  tapHint:{ fontSize: 10, color: "#9ca3af" },
+  price:   { fontSize: 14, fontWeight: 800, color: "#1e3a8a" },
+  priceNA: { fontSize: 11, color: "#9ca3af", fontStyle: "italic" },
+  tapHint: { fontSize: 10, color: "#9ca3af" },
 };
 
 /* ════ Page styles ════ */
