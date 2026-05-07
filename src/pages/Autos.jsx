@@ -88,23 +88,19 @@ const SOCIAL_CONFIG = [
 ════════════════════════════════════════════════════════ */
 function VehicleDetailModal({ vehicle, onClose }) {
   const [imgIdx, setImgIdx] = useState(0);
-  const imgs = parseImages(vehicle.images);
+  const imgs  = parseImages(vehicle.images);
   const phone = (vehicle.whatsapp || "").replace(/\D/g, "");
   const waUrl = phone
     ? `https://wa.me/${phone}?text=${encodeURIComponent(`Hola, vi tu vehículo en Yonkers App: ${vehicle.title}. ¿Sigue disponible?`)}`
     : null;
 
-  const hasSocials = SOCIAL_CONFIG.some(({ key }) => vehicle[key] && String(vehicle[key]).trim());
+  const socials = SOCIAL_CONFIG.filter(({ key }) => vehicle[key] && String(vehicle[key]).trim());
 
-  // Cerrar con fondo o Escape
   useEffect(() => {
     function onKey(e) { if (e.key === "Escape") onClose(); }
     document.addEventListener("keydown", onKey);
     document.body.style.overflow = "hidden";
-    return () => {
-      document.removeEventListener("keydown", onKey);
-      document.body.style.overflow = "";
-    };
+    return () => { document.removeEventListener("keydown", onKey); document.body.style.overflow = ""; };
   }, [onClose]);
 
   return (
@@ -119,12 +115,11 @@ function VehicleDetailModal({ vehicle, onClose }) {
           ) : (
             <div style={md.noImg}><Car size={48} color="#9ca3af" /></div>
           )}
-
-          {/* Miniaturas */}
           {imgs.length > 1 && (
             <div style={md.thumbRow}>
               {imgs.map((src, i) => (
-                <button key={i} style={{ ...md.thumb, outline: i === imgIdx ? "2.5px solid #facc15" : "none" }}
+                <button key={i}
+                  style={{ ...md.thumb, outline: i === imgIdx ? "2.5px solid #facc15" : "none" }}
                   onClick={() => setImgIdx(i)}>
                   <img src={src} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }}
                     onError={(e) => { e.currentTarget.style.display = "none"; }} />
@@ -132,69 +127,62 @@ function VehicleDetailModal({ vehicle, onClose }) {
               ))}
             </div>
           )}
-
-          {/* Botón cerrar */}
-          <button style={md.closeBtn} onClick={onClose}>
-            <X size={16} color="#374151" />
-          </button>
-
-          {/* Badge disponible */}
+          <button style={md.closeBtn} onClick={onClose}><X size={16} color="#374151" /></button>
           <div style={md.availBadge}>Disponible</div>
         </div>
 
-        {/* ── Contenido ── */}
+        {/* ── Cuerpo scrollable ── */}
         <div style={md.body}>
 
-          {/* Título y precio */}
+          {/* Título + precio */}
           <div style={md.titleRow}>
             <div style={md.title}>{vehicle.title}</div>
-            {vehicle.price > 0 && (
-              <div style={md.price}>L {fmt(vehicle.price)}</div>
-            )}
+            {vehicle.price > 0 && <div style={md.price}>L {fmt(vehicle.price)}</div>}
           </div>
-
-          {/* Marca · Año */}
           {(vehicle.brand || vehicle.year) && (
             <div style={md.meta}>{[vehicle.brand, vehicle.year].filter(Boolean).join(" · ")}</div>
           )}
 
           <div style={md.divider} />
 
-          {/* Info del autolote */}
+          {/* ── Tarjeta del autolote ── */}
           {vehicle.autolote_name && (
             <div style={md.autoloteCard}>
-              {/* Avatar */}
-              <div style={md.avatar}>
-                {vehicle.autolote_name.slice(0, 2).toUpperCase()}
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={md.autoloteName}>
-                  {vehicle.autolote_name}
-                  {vehicle.autolote_verified && (
-                    <span style={md.verifiedBadge}>✓ Verificado</span>
+              {/* Fila superior: avatar + nombre + ciudad */}
+              <div style={md.autoloteTop}>
+                <div style={md.avatar}>
+                  {vehicle.autolote_name.slice(0, 2).toUpperCase()}
+                </div>
+                <div style={md.autoloteInfo}>
+                  <div style={md.autoloteNameRow}>
+                    <span style={md.autoloteName}>{vehicle.autolote_name}</span>
+                    {vehicle.autolote_verified && (
+                      <span style={md.verifiedBadge}>✓ Verificado</span>
+                    )}
+                  </div>
+                  {vehicle.autolote_city && (
+                    <div style={md.autoloteCity}>
+                      <MapPin size={12} color="#6b7280" />
+                      <span>{vehicle.autolote_city}</span>
+                    </div>
                   )}
                 </div>
-                {vehicle.autolote_city && (
-                  <div style={md.autoloteCity}>
-                    <MapPin size={11} color="#6b7280" />
-                    {vehicle.autolote_city}
-                  </div>
-                )}
               </div>
-              {/* Redes sociales */}
-              {hasSocials && (
+
+              {/* Fila inferior: redes sociales (si tiene) */}
+              {socials.length > 0 && (
                 <div style={md.socialsRow}>
-                  {SOCIAL_CONFIG.map(({ key, label, icon, color, bg, border, buildUrl }) => {
-                    const val = vehicle[key];
-                    if (!val || !String(val).trim()) return null;
-                    return (
+                  <span style={md.socialsLabel}>Redes sociales</span>
+                  <div style={md.socialBtns}>
+                    {socials.map(({ key, label, icon, color, bg, border, buildUrl }) => (
                       <button key={key} title={label}
-                        onClick={() => safeOpen(buildUrl(String(val).trim()))}
+                        onClick={() => safeOpen(buildUrl(String(vehicle[key]).trim()))}
                         style={{ ...md.socialBtn, background: bg, border: `1px solid ${border}`, color }}>
                         {icon}
+                        <span style={{ fontSize: 11, fontWeight: 600 }}>{label}</span>
                       </button>
-                    );
-                  })}
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
@@ -221,7 +209,7 @@ function VehicleDetailModal({ vehicle, onClose }) {
           </div>
         </div>
 
-        {/* ── Botón WhatsApp fijo ── */}
+        {/* ── Footer fijo — siempre visible ── */}
         <div style={md.footer}>
           {waUrl ? (
             <a href={waUrl} target="_blank" rel="noopener noreferrer" style={md.waBtn}>
@@ -572,88 +560,113 @@ const md = {
     background: "rgba(0,0,0,0.55)", backdropFilter: "blur(4px)",
     display: "flex", alignItems: "flex-end", justifyContent: "center",
   },
+  /* El sheet NO hace scroll — solo el body interior */
   sheet: {
     background: "#fff", borderRadius: "22px 22px 0 0",
     width: "100%", maxWidth: 560, maxHeight: "92vh",
-    overflowY: "auto", display: "flex", flexDirection: "column",
+    overflow: "hidden",                          /* ← sin scroll en el sheet */
+    display: "flex", flexDirection: "column",
     boxShadow: "0 -8px 40px rgba(0,0,0,0.18)",
   },
   imgWrap: {
-    position: "relative", width: "100%", height: 220,
+    position: "relative", width: "100%", height: 190,
     background: "#f3f4f6", flexShrink: 0, overflow: "hidden",
   },
   img:   { width: "100%", height: "100%", objectFit: "cover", display: "block" },
   noImg: { width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" },
   thumbRow: {
-    position: "absolute", bottom: 10, left: 0, right: 0,
+    position: "absolute", bottom: 8, left: 0, right: 0,
     display: "flex", justifyContent: "center", gap: 6, padding: "0 12px",
   },
   thumb: {
-    width: 38, height: 38, borderRadius: 8, overflow: "hidden",
+    width: 36, height: 36, borderRadius: 8, overflow: "hidden",
     border: "2px solid transparent", cursor: "pointer",
     background: "rgba(0,0,0,0.35)", padding: 0, flexShrink: 0,
   },
   closeBtn: {
-    position: "absolute", top: 12, right: 12,
+    position: "absolute", top: 10, right: 10,
     width: 32, height: 32, borderRadius: "50%",
     background: "#fff", border: "none",
     display: "flex", alignItems: "center", justifyContent: "center",
     cursor: "pointer", boxShadow: "0 2px 8px rgba(0,0,0,0.18)",
   },
   availBadge: {
-    position: "absolute", top: 12, left: 12,
+    position: "absolute", top: 10, left: 10,
     background: "#dcfce7", color: "#16a34a",
     fontSize: 11, fontWeight: 700, padding: "4px 10px", borderRadius: 8,
   },
+
+  /* body hace scroll independiente — deja el footer siempre visible */
   body: {
-    padding: "18px 20px 4px", display: "flex", flexDirection: "column", gap: 12, flex: 1,
+    flex: 1, overflowY: "auto",
+    padding: "16px 18px 8px",
+    display: "flex", flexDirection: "column", gap: 12,
   },
   titleRow: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 },
-  title: { fontSize: 20, fontWeight: 800, color: "#111827", lineHeight: 1.25, flex: 1 },
-  price: { fontSize: 20, fontWeight: 800, color: "#1e3a8a", flexShrink: 0 },
+  title: { fontSize: 19, fontWeight: 800, color: "#111827", lineHeight: 1.25, flex: 1 },
+  price: { fontSize: 19, fontWeight: 800, color: "#1e3a8a", flexShrink: 0 },
   meta:  { fontSize: 13, color: "#6b7280", marginTop: -6 },
-  divider: { height: 1, background: "#f1f5f9" },
+  divider: { height: 1, background: "#f1f5f9", flexShrink: 0 },
 
+  /* Tarjeta del autolote — columna, nunca se corta */
   autoloteCard: {
+    background: "#f8fafc", borderRadius: 14, padding: "14px 16px",
+    display: "flex", flexDirection: "column", gap: 10,
+  },
+  autoloteTop: {
     display: "flex", alignItems: "center", gap: 12,
-    background: "#f8fafc", borderRadius: 14, padding: "12px 14px",
   },
   avatar: {
-    width: 40, height: 40, borderRadius: 12,
+    width: 44, height: 44, borderRadius: 13,
     background: "#1e3a8a", color: "#facc15",
-    fontSize: 14, fontWeight: 800,
+    fontSize: 15, fontWeight: 800,
     display: "flex", alignItems: "center", justifyContent: "center",
     flexShrink: 0,
   },
-  autoloteName: { fontSize: 14, fontWeight: 700, color: "#111827", display: "flex", alignItems: "center", gap: 6 },
+  autoloteInfo: { flex: 1, minWidth: 0 },
+  autoloteNameRow: { display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" },
+  autoloteName: { fontSize: 15, fontWeight: 700, color: "#111827" },
   verifiedBadge: {
     fontSize: 10, fontWeight: 700, color: "#1d4ed8",
-    background: "#eff6ff", padding: "2px 7px", borderRadius: 6,
+    background: "#eff6ff", padding: "2px 7px", borderRadius: 6, flexShrink: 0,
   },
   autoloteCity: {
-    fontSize: 12, color: "#6b7280", display: "flex", alignItems: "center", gap: 4, marginTop: 3,
+    fontSize: 12, color: "#6b7280",
+    display: "flex", alignItems: "center", gap: 4, marginTop: 4,
   },
-  socialsRow: { display: "flex", gap: 6, marginLeft: "auto" },
+  /* Redes sociales en fila propia — nunca tapan el nombre */
+  socialsRow: {
+    display: "flex", flexDirection: "column", gap: 6,
+    borderTop: "1px solid #e2e8f0", paddingTop: 10,
+  },
+  socialsLabel: { fontSize: 11, fontWeight: 700, color: "#9ca3af", letterSpacing: "0.04em", textTransform: "uppercase" },
+  socialBtns: { display: "flex", gap: 8 },
   socialBtn: {
-    width: 34, height: 34, borderRadius: 9,
-    display: "flex", alignItems: "center", justifyContent: "center",
-    cursor: "pointer", transition: "transform .15s", flexShrink: 0,
+    display: "flex", alignItems: "center", gap: 6,
+    padding: "7px 12px", borderRadius: 10,
+    cursor: "pointer", transition: "transform .15s",
+    fontFamily: "system-ui, sans-serif",
   },
 
   detailsBox: {
     background: "#f8fafc", borderRadius: 14, padding: "14px 16px",
-    display: "flex", flexDirection: "column", gap: 0,
+    display: "flex", flexDirection: "column",
   },
-  detailsTitle: { fontSize: 11, fontWeight: 700, color: "#9ca3af", letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 10 },
+  detailsTitle: {
+    fontSize: 11, fontWeight: 700, color: "#9ca3af",
+    letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 10,
+  },
   detailRow: {
     display: "flex", justifyContent: "space-between", alignItems: "center",
-    padding: "7px 0", borderBottom: "1px solid #f1f5f9",
+    padding: "8px 0", borderBottom: "1px solid #f1f5f9",
   },
   detailLabel: { fontSize: 13, color: "#6b7280" },
   detailValue: { fontSize: 13, fontWeight: 600, color: "#111827", textAlign: "right" },
 
+  /* Footer SIEMPRE visible — no hace scroll */
   footer: {
-    padding: "16px 20px 32px", borderTop: "1px solid #f1f5f9",
+    padding: "14px 18px calc(14px + env(safe-area-inset-bottom, 0px))",
+    borderTop: "1px solid #f1f5f9",
     background: "#fff", flexShrink: 0,
   },
   waBtn: {
@@ -662,9 +675,7 @@ const md = {
     background: "#16a34a", color: "#fff",
     fontSize: 16, fontWeight: 700, textDecoration: "none",
   },
-  noContact: {
-    textAlign: "center", color: "#9ca3af", fontSize: 13, padding: "10px 0",
-  },
+  noContact: { textAlign: "center", color: "#9ca3af", fontSize: 13, padding: "10px 0" },
 };
 
 /* ════ VehicleCard styles ════ */
