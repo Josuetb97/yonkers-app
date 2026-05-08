@@ -183,10 +183,8 @@ function AppRoutes({ tab, setTab, showBottomNav, user, loading, openLogin, cartC
           <SolicitudYonker user={user} openLogin={() => setLoginOpen(true)} />
         } />
 
-        {/* SOLICITUD AUTOLOTE */}
-        <Route path="/autolote-solicitud" element={
-          <SolicitudAutolote user={user} openLogin={() => setLoginOpen(true)} />
-        } />
+        {/* SOLICITUD AUTOLOTE — formulario público, sin login */}
+        <Route path="/autolote-solicitud" element={<SolicitudAutolote />} />
 
         <Route path="/login"    element={<Navigate to="/" replace />} />
         <Route path="/register" element={<Navigate to="/" replace />} />

@@ -10,11 +10,7 @@ const SUPER_ADMIN_EMAILS = [
 ];
 
 const BUDGET_CHIPS = [
-  { label: "Todos",         min: 0,       max: Infinity },
-  { label: "Hasta L200k",  min: 0,       max: 200000   },
-  { label: "L200k–500k",   min: 200000,  max: 500000   },
-  { label: "L500k–1M",     min: 500000,  max: 1000000  },
-  { label: "Más de L1M",   min: 1000000, max: Infinity },
+  { label: "Todos", min: 0, max: Infinity },
 ];
 
 function parseImages(images) {
@@ -459,14 +455,14 @@ export default function Autos({ user }) {
           </div>
         </div>
 
-        {/* Buscador + filtros (también dentro del bloque sticky) */}
+        {/* Buscador + filtros */}
         <div style={pg.filterBox}>
 
           {/* Barra de búsqueda */}
           <div style={pg.searchWrap}>
             <Search size={16} color="#9ca3af" />
             <input
-              placeholder="Buscar por marca, modelo, año, ciudad..."
+              placeholder="Marca, modelo, año, ciudad…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               style={pg.searchInput}
@@ -478,46 +474,43 @@ export default function Autos({ user }) {
             )}
           </div>
 
-          {/* Label presupuesto */}
-          <div style={pg.budgetLabel}>
-            <SlidersHorizontal size={13} color="#1e3a8a" />
-            <span>Filtrar por presupuesto</span>
+          {/* Chips de presupuesto — scroll horizontal, sin salto de línea */}
+          <div style={pg.chipsScroll}>
+            <style>{`
+              .chips-track { display:flex; gap:7px; overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none; }
+              .chips-track::-webkit-scrollbar { display:none; }
+            `}</style>
+            <div className="chips-track">
+              {BUDGET_CHIPS.map((chip, i) => {
+                const active = !showCustom && budgetIdx === i;
+                return (
+                  <button key={chip.label}
+                    style={{ ...pg.chip, ...(active ? pg.chipActive : {}) }}
+                    onClick={() => { setBudgetIdx(i); setShowCustom(false); setMinPrice(""); setMaxPrice(""); }}>
+                    {chip.label}
+                  </button>
+                );
+              })}
+              {/* Separador visual */}
+              <div style={{ width: 1, background: "#e2e8f0", flexShrink: 0, margin: "2px 0" }} />
+              <button
+                style={{ ...pg.chip, ...(showCustom ? pg.chipActive : {}), gap: 5, display: "flex", alignItems: "center" }}
+                onClick={() => { setShowCustom((v) => !v); setBudgetIdx(0); }}>
+                <SlidersHorizontal size={11} />
+                Rango
+              </button>
+            </div>
           </div>
 
-          {/* Chips rápidos */}
-          <div style={pg.chipsRow}>
-            {BUDGET_CHIPS.map((chip, i) => {
-              const active = !showCustom && budgetIdx === i;
-              return (
-                <button key={chip.label}
-                  style={{ ...pg.chip, ...(active ? pg.chipActive : {}) }}
-                  onClick={() => { setBudgetIdx(i); setShowCustom(false); setMinPrice(""); setMaxPrice(""); }}>
-                  {chip.label}
-                </button>
-              );
-            })}
-            <button
-              style={{ ...pg.chip, ...(showCustom ? pg.chipActive : {}) }}
-              onClick={() => { setShowCustom((v) => !v); setBudgetIdx(0); }}>
-              ✏️ Personalizado
-            </button>
-          </div>
-
-          {/* Rango personalizado */}
+          {/* Panel de rango personalizado — compacto, inline */}
           {showCustom && (
             <div style={pg.customRange}>
               <div style={pg.rangeRow}>
-                <div style={pg.rangeField}>
-                  <label style={pg.rangeLabel}>Mínimo (L)</label>
-                  <input type="number" placeholder="0" value={minPrice}
-                    onChange={(e) => setMinPrice(e.target.value)} style={pg.rangeInput} min={0} />
-                </div>
-                <div style={{ color: "#9ca3af", fontSize: 18, alignSelf: "flex-end", paddingBottom: 8 }}>—</div>
-                <div style={pg.rangeField}>
-                  <label style={pg.rangeLabel}>Máximo (L)</label>
-                  <input type="number" placeholder="Sin límite" value={maxPrice}
-                    onChange={(e) => setMaxPrice(e.target.value)} style={pg.rangeInput} min={0} />
-                </div>
+                <input type="number" placeholder="Mínimo (L)" value={minPrice}
+                  onChange={(e) => setMinPrice(e.target.value)} style={pg.rangeInput} min={0} />
+                <span style={{ color: "#9ca3af", fontSize: 14, flexShrink: 0 }}>—</span>
+                <input type="number" placeholder="Máximo (L)" value={maxPrice}
+                  onChange={(e) => setMaxPrice(e.target.value)} style={pg.rangeInput} min={0} />
               </div>
               {(minPrice || maxPrice) && (
                 <div style={pg.rangePreview}>
@@ -527,28 +520,17 @@ export default function Autos({ user }) {
             </div>
           )}
 
-          {/* Resultados + limpiar */}
+          {/* Resultados + limpiar — solo si hay filtros activos */}
           {activeFilters > 0 && (
             <div style={pg.activeRow}>
               <span style={pg.activeCount}>{filtered.length} resultado{filtered.length !== 1 ? "s" : ""}</span>
               <button style={pg.clearAllBtn} onClick={clearAll}>
-                <X size={11} /> Limpiar filtros
+                <X size={11} /> Limpiar
               </button>
             </div>
           )}
         </div>
       </div>
-
-      {/* ── BANNER ── */}
-      {!isOwner && !loading && (
-        <div style={pg.joinBanner}>
-          <div style={pg.joinText}>
-            <div style={pg.joinTitle}>🚗 ¿Tienes un autolote?</div>
-            <div style={pg.joinSub}>Publica gratis y llega a miles de compradores</div>
-          </div>
-          <button style={pg.joinBtn} onClick={() => navigate("/autolote-solicitud")}>Únete</button>
-        </div>
-      )}
 
       {/* ── LISTADO ── */}
       <div style={pg.body}>
@@ -573,17 +555,34 @@ export default function Autos({ user }) {
           </div>
         ) : (
           <>
-            {!activeFilters && (
-              <div style={pg.resultsLabel}>
-                {filtered.length} vehículo{filtered.length !== 1 ? "s" : ""} disponible{filtered.length !== 1 ? "s" : ""}
-              </div>
-            )}
+            <div style={pg.resultsLabel}>
+              <span style={{ fontWeight: 700, color: "#111" }}>{filtered.length}</span>
+              {" "}vehículo{filtered.length !== 1 ? "s" : ""} disponible{filtered.length !== 1 ? "s" : ""}
+            </div>
             <div style={pg.grid}>
               {filtered.map((v) => (
                 <VehicleCard key={v.id} v={v} onClick={setSelectedVehicle} />
               ))}
             </div>
           </>
+        )}
+
+        {/* ── BANNER ÚNETE — al final del contenido, fuera del flujo de cards ── */}
+        {!isOwner && !loading && (
+          <div style={pg.joinBanner} onClick={() => navigate("/autolote-solicitud")}>
+            <div style={pg.joinLeft}>
+              <div style={pg.joinIconWrap}>🚗</div>
+              <div>
+                <div style={pg.joinTitle}>¿Tienes un autolote?</div>
+                <div style={pg.joinSub}>Publica gratis · Llega a miles de compradores</div>
+              </div>
+            </div>
+            <div style={pg.joinArrow}>
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <path d="M3 8h10M9 4l4 4-4 4" stroke="#1e3a8a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </div>
+          </div>
         )}
       </div>
 
@@ -830,13 +829,13 @@ const pg = {
   },
 
   filterBox: {
-    background: "#fff", padding: "12px 16px 10px",
+    background: "#fff", padding: "10px 16px 10px",
     borderBottom: "1px solid #ebebeb",
-    display: "flex", flexDirection: "column", gap: 9,
+    display: "flex", flexDirection: "column", gap: 8,
   },
   searchWrap: {
     display: "flex", alignItems: "center", gap: 8,
-    height: 42, padding: "0 12px",
+    height: 40, padding: "0 12px",
     border: "1.5px solid #e2e8f0", borderRadius: 10, background: "#f8fafc",
   },
   searchInput: {
@@ -846,36 +845,42 @@ const pg = {
   },
   iconBtn: { background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex", alignItems: "center" },
 
-  budgetLabel: { display: "flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 700, color: "#1e3a8a" },
-  chipsRow: { display: "flex", gap: 6, flexWrap: "wrap" },
+  /* Chips — scroll horizontal sin salto de línea */
+  chipsScroll: { margin: "0 -16px", padding: "0 16px" },
   chip: {
-    padding: "5px 12px", borderRadius: 20,
+    padding: "6px 14px", borderRadius: 20,
     border: "1.5px solid #e2e8f0", background: "#f8fafc",
     color: "#374151", fontSize: 12, fontWeight: 600,
     cursor: "pointer", whiteSpace: "nowrap", transition: "all 0.15s",
+    flexShrink: 0,
   },
-  chipActive: { background: "#1e3a8a", color: "#fff", border: "1.5px solid #1e3a8a" },
+  chipActive: {
+    background: "#1e3a8a", color: "#fff",
+    border: "1.5px solid #1e3a8a",
+    boxShadow: "0 2px 8px rgba(30,58,138,0.25)",
+  },
 
+  /* Rango personalizado — compacto */
   customRange: {
     background: "#f0f4ff", border: "1.5px solid #bfdbfe",
-    borderRadius: 12, padding: "12px 14px",
+    borderRadius: 12, padding: "10px 12px",
     display: "flex", flexDirection: "column", gap: 8,
   },
-  rangeRow:   { display: "flex", alignItems: "flex-end", gap: 10 },
-  rangeField: { flex: 1, display: "flex", flexDirection: "column", gap: 4 },
-  rangeLabel: { fontSize: 11, fontWeight: 700, color: "#374151" },
+  rangeRow: { display: "flex", alignItems: "center", gap: 8 },
   rangeInput: {
-    height: 38, padding: "0 11px",
+    flex: 1, height: 36, padding: "0 11px",
     border: "1.5px solid #bfdbfe", borderRadius: 9,
-    fontSize: 14, color: "#111", background: "#fff",
-    outline: "none", width: "100%", boxSizing: "border-box",
+    fontSize: 13, color: "#111", background: "#fff",
+    outline: "none", boxSizing: "border-box",
     fontFamily: "system-ui, sans-serif",
+    minWidth: 0,
   },
   rangePreview: {
     fontSize: 12, color: "#1e3a8a", fontWeight: 600,
     background: "#dbeafe", borderRadius: 8, padding: "5px 10px",
   },
-  activeRow: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 },
+
+  activeRow: { display: "flex", alignItems: "center", justifyContent: "space-between" },
   activeCount: { fontSize: 12, color: "#6b7280", fontWeight: 600 },
   clearAllBtn: {
     display: "flex", alignItems: "center", gap: 4,
@@ -883,21 +888,32 @@ const pg = {
     padding: "4px 10px", color: "#6b7280", fontSize: 11, fontWeight: 600, cursor: "pointer",
   },
 
+  /* Banner al fondo — elegante, no intrusivo */
   joinBanner: {
-    margin: "12px 16px",
-    background: "linear-gradient(135deg, #1e3a8a, #1d4ed8)",
-    borderRadius: 14, padding: "13px 16px",
+    marginTop: 20,
+    background: "#fff",
+    border: "1.5px solid #e2e8f0",
+    borderRadius: 16, padding: "16px 18px",
     display: "flex", alignItems: "center",
     justifyContent: "space-between", gap: 12,
+    cursor: "pointer",
+    boxShadow: "0 2px 10px rgba(0,0,0,0.05)",
   },
-  joinText: { flex: 1 },
-  joinTitle: { fontSize: 13, fontWeight: 700, color: "#fff", marginBottom: 2 },
-  joinSub:   { fontSize: 11, color: "rgba(255,255,255,0.7)" },
-  joinBtn: {
-    padding: "7px 14px", borderRadius: 9,
-    background: "#facc15", border: "none",
-    color: "#1e3a8a", fontSize: 13, fontWeight: 700,
-    cursor: "pointer", flexShrink: 0,
+  joinLeft: { display: "flex", alignItems: "center", gap: 12, flex: 1 },
+  joinIconWrap: {
+    fontSize: 26,
+    width: 44, height: 44, borderRadius: 12,
+    background: "#eff6ff",
+    display: "flex", alignItems: "center", justifyContent: "center",
+    flexShrink: 0,
+  },
+  joinTitle: { fontSize: 13, fontWeight: 700, color: "#0f172a", marginBottom: 2 },
+  joinSub:   { fontSize: 11, color: "#64748b", lineHeight: 1.4 },
+  joinArrow: {
+    width: 32, height: 32, borderRadius: "50%",
+    background: "#eff6ff",
+    display: "flex", alignItems: "center", justifyContent: "center",
+    flexShrink: 0,
   },
 
   body: { padding: "4px 16px 16px" },
@@ -917,7 +933,7 @@ const pg = {
     padding: "9px 20px", borderRadius: 10, border: "none",
     background: "#1e3a8a", color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer",
   },
-  resultsLabel: { fontSize: 12, color: "#6b7280", fontWeight: 600, margin: "10px 0" },
+  resultsLabel: { fontSize: 12, color: "#6b7280", fontWeight: 500, margin: "10px 0 12px" },
   grid: {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fill, minmax(155px, 1fr))",
