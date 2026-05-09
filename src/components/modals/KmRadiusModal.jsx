@@ -1,5 +1,6 @@
 import { X, MapPin, Navigation } from "lucide-react";
 import { useState, useMemo } from "react";
+import { GoogleMap, Circle, Marker } from "@react-google-maps/api";
 
 /* ─────────────────────────────────────────────────────────
    Ciudades de Honduras con coordenadas
@@ -263,9 +264,39 @@ export default function KmRadiusModal({ open, onClose, location, radius, onApply
           </div>
         </div>
 
-        {/* ── Visual de radio (sin Google Maps) ── */}
+        {/* ── Mapa real con círculo de radio ── */}
         <div style={s.mapWrap}>
-          <RadiusVisual city={localLoc?.name || null} km={localKm} />
+          {localLoc ? (
+            <GoogleMap
+              mapContainerStyle={{ width: "100%", height: "100%" }}
+              center={{ lat: localLoc.lat, lng: localLoc.lng }}
+              zoom={localKm <= 20 ? 11 : localKm <= 60 ? 9 : localKm <= 120 ? 8 : 7}
+              options={{
+                fullscreenControl: false,
+                mapTypeControl: false,
+                streetViewControl: false,
+                zoomControl: false,
+                gestureHandling: "none",
+              }}
+            >
+              <Marker position={{ lat: localLoc.lat, lng: localLoc.lng }} />
+              {localKm < 99999 && (
+                <Circle
+                  center={{ lat: localLoc.lat, lng: localLoc.lng }}
+                  radius={localKm * 1000}
+                  options={{
+                    fillColor: "#2374e1",
+                    fillOpacity: 0.15,
+                    strokeColor: "#2374e1",
+                    strokeOpacity: 0.8,
+                    strokeWeight: 2,
+                  }}
+                />
+              )}
+            </GoogleMap>
+          ) : (
+            <RadiusVisual city={null} km={localKm} />
+          )}
         </div>
 
         {/* ── Botón aplicar ── */}

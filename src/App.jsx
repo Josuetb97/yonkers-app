@@ -30,6 +30,7 @@ import { useEffect, useRef, useState } from "react";
 import { supabase } from "./lib/supabase";
 import { useCart } from "./hooks/useCart";
 import NotificationPrompt from "./components/NotificationPrompt";
+import { LoadScript } from "@react-google-maps/api";
 
 /* --- Tab order para calcular dirección de la animación --- */
 const TAB_ORDER = ["inicio", "solicitar", "mensajes", "autolote"];
@@ -255,6 +256,12 @@ export default function App() {
   return (
     <ErrorBoundary>
       <ToastProvider>
+        {/* Google Maps se carga UNA SOLA VEZ aquí — todos los componentes hijos
+            usan GoogleMap/Marker/Circle directamente sin volver a cargarlo */}
+        <LoadScript
+          googleMapsApiKey={import.meta.env.VITE_GOOGLE_MAPS_KEY}
+          loadingElement={<></>}
+        >
         <BrowserRouter>
           <AppRoutes
             tab={tab}
@@ -284,6 +291,7 @@ export default function App() {
 
           <NotificationPrompt />
         </BrowserRouter>
+        </LoadScript>
       </ToastProvider>
     </ErrorBoundary>
   );

@@ -4,7 +4,6 @@ import {
   GoogleMap,
   Marker,
   InfoWindow,
-  useJsApiLoader,
 } from "@react-google-maps/api";
 import { supabase } from "../../lib/supabase";
 
@@ -66,11 +65,6 @@ export default function Stats({ user }) {
   const [allApproved, setAllApproved]   = useState([]);
   const [selectedY, setSelectedY]       = useState(null);
   const [loading, setLoading]           = useState(true);
-
-  /* Google Maps */
-  const { isLoaded, loadError } = useJsApiLoader({
-    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_KEY,
-  });
 
   /* Guard: solo super admin */
   useEffect(() => {
@@ -263,110 +257,54 @@ export default function Stats({ user }) {
               </div>
 
               <div style={{ height: 420 }}>
-                {loadError && (
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      height: "100%",
-                      color: "#ef4444",
-                    }}
-                  >
-                    Error cargando mapa
-                  </div>
-                )}
-                {!loadError && !isLoaded && (
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      height: "100%",
-                      color: "#9ca3af",
-                    }}
-                  >
-                    Cargando mapa…
-                  </div>
-                )}
-                {!loadError && isLoaded && (
-                  <GoogleMap
-                    mapContainerStyle={{ width: "100%", height: "100%" }}
-                    center={HONDURAS_CENTER}
-                    zoom={7}
-                    options={{
-                      fullscreenControl: false,
-                      mapTypeControl: false,
-                      streetViewControl: false,
-                      zoomControl: true,
-                    }}
-                  >
-                    {mapYonkers.map((y) => (
-                      <Marker
-                        key={y.id}
-                        position={{
-                          lat: Number(y.lat),
-                          lng: Number(y.lng),
-                        }}
-                        icon={{
-                          url: "http://maps.google.com/mapfiles/ms/icons/green-dot.png",
-                        }}
-                        onClick={() => setSelectedY(y)}
-                      />
-                    ))}
-
-                    {selectedY && (
-                      <InfoWindow
-                        position={{
-                          lat: Number(selectedY.lat),
-                          lng: Number(selectedY.lng),
-                        }}
-                        onCloseClick={() => setSelectedY(null)}
-                      >
-                        <div style={{ maxWidth: 210 }}>
-                          <h4
+                <GoogleMap
+                  mapContainerStyle={{ width: "100%", height: "100%" }}
+                  center={HONDURAS_CENTER}
+                  zoom={7}
+                  options={{
+                    fullscreenControl: false,
+                    mapTypeControl: false,
+                    streetViewControl: false,
+                    zoomControl: true,
+                  }}
+                >
+                  {mapYonkers.map((y) => (
+                    <Marker
+                      key={y.id}
+                      position={{ lat: Number(y.lat), lng: Number(y.lng) }}
+                      icon={{ url: "http://maps.google.com/mapfiles/ms/icons/green-dot.png" }}
+                      onClick={() => setSelectedY(y)}
+                    />
+                  ))}
+                  {selectedY && (
+                    <InfoWindow
+                      position={{ lat: Number(selectedY.lat), lng: Number(selectedY.lng) }}
+                      onCloseClick={() => setSelectedY(null)}
+                    >
+                      <div style={{ maxWidth: 210 }}>
+                        <h4 style={{ margin: 0, color: "#111", fontWeight: 700, fontSize: 14 }}>
+                          {selectedY.name}
+                        </h4>
+                        <p style={{ margin: "4px 0 8px", color: "#555", fontSize: 13 }}>
+                          📍 {selectedY.city}
+                        </p>
+                        {selectedY.whatsapp && (
+                          <a
+                            href={`https://wa.me/${selectedY.whatsapp.replace(/\D/g, "")}`}
+                            target="_blank" rel="noreferrer"
                             style={{
-                              margin: 0,
-                              color: "#111",
-                              fontWeight: 700,
-                              fontSize: 14,
+                              display: "inline-block", background: "#25D366",
+                              color: "#fff", padding: "5px 12px", borderRadius: 8,
+                              fontWeight: 700, fontSize: 13, textDecoration: "none",
                             }}
                           >
-                            {selectedY.name}
-                          </h4>
-                          <p
-                            style={{
-                              margin: "4px 0 8px",
-                              color: "#555",
-                              fontSize: 13,
-                            }}
-                          >
-                            📍 {selectedY.city}
-                          </p>
-                          {selectedY.whatsapp && (
-                            <a
-                              href={`https://wa.me/${selectedY.whatsapp.replace(/\D/g, "")}`}
-                              target="_blank"
-                              rel="noreferrer"
-                              style={{
-                                display: "inline-block",
-                                background: "#25D366",
-                                color: "#fff",
-                                padding: "5px 12px",
-                                borderRadius: 8,
-                                fontWeight: 700,
-                                fontSize: 13,
-                                textDecoration: "none",
-                              }}
-                            >
-                              💬 WhatsApp
-                            </a>
-                          )}
-                        </div>
-                      </InfoWindow>
-                    )}
-                  </GoogleMap>
-                )}
+                            💬 WhatsApp
+                          </a>
+                        )}
+                      </div>
+                    </InfoWindow>
+                  )}
+                </GoogleMap>
               </div>
             </div>
 

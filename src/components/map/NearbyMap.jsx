@@ -2,7 +2,6 @@ import {
   GoogleMap,
   Marker,
   InfoWindow,
-  useJsApiLoader,
   DirectionsRenderer,
 } from "@react-google-maps/api";
 import { useEffect, useState, useCallback } from "react";
@@ -18,10 +17,6 @@ export default function NearbyMap({
   selectedId,
   onSelectId,
 }) {
-  const { isLoaded, loadError } = useJsApiLoader({
-    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_KEY,
-  });
-
   const [selectedPiece, setSelectedPiece] = useState(null);
   const [directions, setDirections] = useState(null);
 
@@ -72,12 +67,6 @@ export default function NearbyMap({
     const url = `https://www.google.com/maps/dir/?api=1&destination=${piece.lat},${piece.lng}`;
     window.open(url, "_blank");
   };
-
-  /* =========================
-     Estados de carga
-  ========================= */
-  if (loadError) return <p>Error cargando mapa</p>;
-  if (!isLoaded) return <p>Cargando mapa...</p>;
 
   return (
     <GoogleMap
