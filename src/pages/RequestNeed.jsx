@@ -47,7 +47,7 @@ export default function RequestNeed() {
   const cameraRef   = useRef();
   const galleryRef  = useRef();
 
-  const EMPTY = { title: "", brand: "", years: "", city: "", municipio: "", description: "", whatsapp: "" };
+  const EMPTY = { title: "", brand: "", years: "", city: "", municipio: "", description: "", whatsapp: "", name: "" };
 
   const [form,       setForm]       = useState(EMPTY);
   const [files,      setFiles]      = useState([]);
@@ -125,6 +125,7 @@ export default function RequestNeed() {
                          : [form.municipio?.trim(), form.city?.trim()].filter(Boolean).join(", ") || "",
           description: form.description?.trim() || "",
           whatsapp:    form.whatsapp.trim(),
+          name:        form.name?.trim()        || "",
           images:      imageUrls,
           owner_id:    user?.id ?? null,
         }])
@@ -145,6 +146,7 @@ export default function RequestNeed() {
                         ? "Todo Honduras"
                         : [form.municipio?.trim(), form.city?.trim()].filter(Boolean).join(", ") || "",
             whatsapp: form.whatsapp.trim(),
+            name:     form.name?.trim()     || "",
             images:   imageUrls,
           }),
         });
@@ -160,6 +162,7 @@ export default function RequestNeed() {
         brand:       inserted.brand,
         city:        inserted.city,
         description: inserted.description,
+        name:        inserted.name || form.name?.trim() || "",
         imageUrls,
         shareFiles,
       });
@@ -179,11 +182,12 @@ export default function RequestNeed() {
 
   async function handleShare() {
     if (!sentData) return;
-    const { title, brand, city, description, imageUrls, shareFiles } = sentData;
+    const { title, brand, city, description, name, imageUrls, shareFiles } = sentData;
     let text = `🔍 Busco: *${title}*`;
     if (brand)       text += ` (${brand})`;
     if (city)        text += ` — ${city}`;
     if (description) text += `\n${description}`;
+    if (name)        text += `\n\n👤 Solicitado por: *${name}*`;
     text += `\n\nPublicado en Yonkers App 🔧\nhttps://yonkersapp.com/request`;
 
     const canShareFiles = navigator.canShare && shareFiles.length > 0 &&
@@ -449,6 +453,19 @@ export default function RequestNeed() {
           <SectionTitle>Datos de contacto</SectionTitle>
 
           <div style={st.sectionBody}>
+
+            {/* Nombre */}
+            <div style={st.field}>
+              <label style={st.label}>Tu nombre</label>
+              <input
+                className="rn-input"
+                name="name"
+                value={form.name}
+                onChange={handleChange}
+                placeholder="Ej: Carlos Martínez"
+                style={st.input}
+              />
+            </div>
 
             {/* Aviso explicativo */}
             <div style={{
