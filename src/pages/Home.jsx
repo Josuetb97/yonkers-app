@@ -559,6 +559,9 @@ export default function Home({ user, openLogin }) {
                 { label: "📋  Mis piezas", action: () => { setShowMenu(false); navigate("/my-pieces"); } },
                 { label: "💬  Mensajes", action: () => { setShowMenu(false); navigate("/messages"); } },
                 { label: "📣  Solicitar pieza", action: () => { setShowMenu(false); navigate("/request"); } },
+                ...(isSuperAdmin ? [
+                  { label: "📊  Estadísticas", action: () => { setShowMenu(false); navigate("/stats"); } },
+                ] : []),
               ].map(({ label, action }) => (
                 <button
                   key={label}

@@ -13,6 +13,7 @@ import MainLayout from "./layouts/MainLayout";
 import Home from "./pages/Home";
 import BottomNav from "./components/BottomNav";
 import Admin from "./pages/admin/Admin";
+import Stats from "./pages/admin/Stats";
 import SolicitudYonker from "./pages/SolicitudYonker";
 import SolicitudAutolote from "./pages/SolicitudAutolote";
 import RequestNeed from "./pages/RequestNeed";
@@ -157,6 +158,13 @@ function AppRoutes({ tab, setTab, showBottomNav, user, loading, openLogin, cartC
         <Route path="/admin" element={
           <ProtectedRoute user={user} loading={loading}>
             <Admin user={user} />
+          </ProtectedRoute>
+        } />
+
+        {/* STATS — solo super admin */}
+        <Route path="/stats" element={
+          <ProtectedRoute user={user} loading={loading}>
+            <Stats user={user} />
           </ProtectedRoute>
         } />
 
