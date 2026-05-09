@@ -2,9 +2,10 @@ import {
   useEffect,
   useState,
   useCallback,
+  useMemo,
   useRef,
 } from "react";
-import { Menu, Camera, X, Heart, Mic } from "lucide-react";
+import { Menu, Camera, X, Heart, Mic, MapPin } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 import PieceCard from "../components/PieceCard";
@@ -17,7 +18,30 @@ import { useRecentlyViewed } from "../hooks/useRecentlyViewed";
 import { useAnalytics } from "../hooks/useAnalytics";
 import { useVoiceSearch } from "../hooks/useVoiceSearch";
 import PhotoSearchModal from "../components/modals/PhotoSearchModal";
+import KmRadiusModal from "../components/modals/KmRadiusModal";
 import { supabase } from "../lib/supabase";
+
+/* ── Haversine: distancia en km entre dos puntos ── */
+function haversine(lat1, lng1, lat2, lng2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1 * Math.PI / 180) *
+    Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+/* ── Leer/guardar ubicación en localStorage ── */
+function readLocStorage() {
+  try { return JSON.parse(localStorage.getItem("yonkers_loc") || "null"); }
+  catch { return null; }
+}
+function writeLocStorage(v) {
+  try { localStorage.setItem("yonkers_loc", JSON.stringify(v)); } catch {}
+}
 
 const API = import.meta.env.VITE_API_URL || "/api";
 
@@ -77,6 +101,21 @@ export default function Home({ user, openLogin }) {
   const [isAutolote,     setIsAutolote]     = useState(false);
   const [voiceError,     setVoiceError]     = useState("");
   const userMenuRef = useRef(null);
+
+  /* ── Filtro de ubicación ── */
+  const [locFilter,    setLocFilter]    = useState(() => readLocStorage());
+  const [showLocModal, setShowLocModal] = useState(false);
+
+  function applyLocation(loc, radius) {
+    const next = loc ? { name: loc.name, lat: loc.lat, lng: loc.lng, radius } : null;
+    setLocFilter(next);
+    writeLocStorage(next);
+  }
+
+  function clearLocation() {
+    setLocFilter(null);
+    writeLocStorage(null);
+  }
 
   const isSuperAdmin = SUPER_ADMIN_EMAILS.includes(user?.email ?? "");
 
@@ -231,10 +270,22 @@ export default function Home({ user, openLogin }) {
     setShowFilters(false);
   }
 
-  /* ── Piezas a mostrar (normal o favoritas) ── */
-  const displayedPieces = showFavs
-    ? pieces.filter((p) => isFavorite(p.id))
-    : pieces;
+  /* ── Piezas a mostrar (normal o favoritas, con filtro de ubicación) ── */
+  const displayedPieces = useMemo(() => {
+    let list = showFavs ? pieces.filter((p) => isFavorite(p.id)) : pieces;
+
+    if (locFilter && locFilter.lat && locFilter.radius && locFilter.radius < 99999) {
+      list = list.filter((p) => {
+        const lat = Number(p.lat);
+        const lng = Number(p.lng);
+        // Si la pieza no tiene GPS, la incluimos igual
+        if (!lat || !lng || (lat === 0 && lng === 0)) return true;
+        return haversine(locFilter.lat, locFilter.lng, lat, lng) <= locFilter.radius;
+      });
+    }
+    return list;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pieces, showFavs, favorites, locFilter]);
 
   return (
     <div style={st.page}>
@@ -393,9 +444,42 @@ export default function Home({ user, openLogin }) {
 
         </div>{/* fin headerStrip */}
 
-        {/* ── Tira blanca: chips de categoría + favoritos ── */}
+        {/* ── Tira blanca: chips de categoría + favoritos + ubicación ── */}
         <div style={st.chipsStrip}>
           <div style={st.chipsRow}>
+            {/* ── Chip de ubicación ── */}
+            <button
+              key="loc"
+              type="button"
+              style={{
+                ...st.chip,
+                ...(locFilter ? st.chipOn : st.chipOff),
+                display: "flex", alignItems: "center", gap: 4,
+                whiteSpace: "nowrap", flexShrink: 0,
+              }}
+              onClick={() => setShowLocModal(true)}
+            >
+              <MapPin size={10} style={{ display: "inline" }} />
+              {locFilter
+                ? `${locFilter.name} · ${locFilter.radius >= 99999 ? "Todo HN" : `${locFilter.radius} km`}`
+                : "Ubicación"}
+              {locFilter && (
+                <span
+                  role="button"
+                  tabIndex={0}
+                  aria-label="Limpiar ubicación"
+                  style={{ marginLeft: 2, lineHeight: 1 }}
+                  onClick={(e) => { e.stopPropagation(); clearLocation(); }}
+                  onKeyDown={(e) => e.key === "Enter" && clearLocation()}
+                >
+                  <X size={10} />
+                </span>
+              )}
+            </button>
+
+            {/* Separador visual */}
+            <div style={{ width: 1, height: 18, background: "#e5e7eb", flexShrink: 0 }} />
+
             {/* Chip favoritos */}
             <button
               key="favs"
@@ -616,6 +700,17 @@ export default function Home({ user, openLogin }) {
         open={showPhotoModal}
         onClose={() => setShowPhotoModal(false)}
         onSubmit={(q) => { setQuery(q); setShowPhotoModal(false); }}
+      />
+
+      {/* ══════════════════════════════
+          MODAL UBICACIÓN
+      ══════════════════════════════ */}
+      <KmRadiusModal
+        open={showLocModal}
+        onClose={() => setShowLocModal(false)}
+        location={locFilter ? { name: locFilter.name, lat: locFilter.lat, lng: locFilter.lng } : null}
+        radius={locFilter?.radius ?? 50}
+        onApply={applyLocation}
       />
 
       {/* ══ VOICE LISTENING INDICATOR ══ */}

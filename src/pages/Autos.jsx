@@ -3,6 +3,29 @@ import { useNavigate } from "react-router-dom";
 import { Search, X, Car, MapPin, Settings, SlidersHorizontal, Navigation } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import NearbyMap from "../components/map/NearbyMap";
+import KmRadiusModal from "../components/modals/KmRadiusModal";
+
+/* ── Haversine: distancia en km ── */
+function haversine(lat1, lng1, lat2, lng2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1 * Math.PI / 180) *
+    Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+/* ── localStorage helpers (clave compartida con Home) ── */
+function readLocStorage() {
+  try { return JSON.parse(localStorage.getItem("yonkers_loc") || "null"); }
+  catch { return null; }
+}
+function writeLocStorage(v) {
+  try { localStorage.setItem("yonkers_loc", JSON.stringify(v)); } catch {}
+}
 
 const SUPER_ADMIN_EMAILS = [
   "josuetb19997@gmail.com",
@@ -372,6 +395,21 @@ export default function Autos({ user }) {
   const [isOwner,        setIsOwner]        = useState(false);
   const heroRef = useRef(null);
 
+  /* ── Filtro de ubicación (compartido con Home vía localStorage) ── */
+  const [locFilter,    setLocFilter]    = useState(() => readLocStorage());
+  const [showLocModal, setShowLocModal] = useState(false);
+
+  function applyLocation(loc, radius) {
+    const next = loc ? { name: loc.name, lat: loc.lat, lng: loc.lng, radius } : null;
+    setLocFilter(next);
+    writeLocStorage(next);
+  }
+
+  function clearLocation() {
+    setLocFilter(null);
+    writeLocStorage(null);
+  }
+
   /* Verificar si es dueño de autolote */
   useEffect(() => {
     if (!user) return;
@@ -450,16 +488,28 @@ export default function Autos({ user }) {
       const { min, max } = BUDGET_CHIPS[budgetIdx];
       list = list.filter((v) => { const p = Number(v.price || 0); return p >= min && p <= max; });
     }
+    // Filtro de ubicación
+    if (locFilter && locFilter.lat && locFilter.radius && locFilter.radius < 99999) {
+      list = list.filter((v) => {
+        const lat = Number(v.autolote_lat);
+        const lng = Number(v.autolote_lng);
+        // Autolote sin GPS → se incluye igual
+        if (!lat || !lng || (lat === 0 && lng === 0)) return true;
+        return haversine(locFilter.lat, locFilter.lng, lat, lng) <= locFilter.radius;
+      });
+    }
     return list;
-  }, [vehicles, search, budgetIdx, showCustom, minPrice, maxPrice]);
+  }, [vehicles, search, budgetIdx, showCustom, minPrice, maxPrice, locFilter]);
 
   const activeFilters =
     (search.trim() ? 1 : 0) +
-    (showCustom ? (minPrice || maxPrice ? 1 : 0) : budgetIdx > 0 ? 1 : 0);
+    (showCustom ? (minPrice || maxPrice ? 1 : 0) : budgetIdx > 0 ? 1 : 0) +
+    (locFilter ? 1 : 0);
 
   function clearAll() {
     setSearch(""); setBudgetIdx(0);
     setShowCustom(false); setMinPrice(""); setMaxPrice("");
+    clearLocation();
   }
 
   /* ════ RENDER ════ */
@@ -525,6 +575,37 @@ export default function Autos({ user }) {
               .chips-track::-webkit-scrollbar { display:none; }
             `}</style>
             <div className="chips-track">
+
+              {/* ── Chip de ubicación ── */}
+              <button
+                style={{
+                  ...pg.chip,
+                  ...(locFilter ? pg.chipActive : {}),
+                  display: "flex", alignItems: "center", gap: 4,
+                  whiteSpace: "nowrap", flexShrink: 0,
+                }}
+                onClick={() => setShowLocModal(true)}
+              >
+                <MapPin size={11} />
+                {locFilter
+                  ? `${locFilter.name} · ${locFilter.radius >= 99999 ? "Todo HN" : `${locFilter.radius} km`}`
+                  : "Ubicación"}
+                {locFilter && (
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    style={{ marginLeft: 2, lineHeight: 1, display: "flex" }}
+                    onClick={(e) => { e.stopPropagation(); clearLocation(); }}
+                    onKeyDown={(e) => e.key === "Enter" && clearLocation()}
+                  >
+                    <X size={10} />
+                  </span>
+                )}
+              </button>
+
+              {/* Separador visual */}
+              <div style={{ width: 1, background: "#e2e8f0", flexShrink: 0, margin: "2px 0" }} />
+
               {BUDGET_CHIPS.map((chip, i) => {
                 const active = !showCustom && budgetIdx === i;
                 return (
@@ -634,6 +715,15 @@ export default function Autos({ user }) {
       {selectedVehicle && (
         <VehicleDetailModal vehicle={selectedVehicle} onClose={() => setSelectedVehicle(null)} />
       )}
+
+      {/* ── MODAL UBICACIÓN ── */}
+      <KmRadiusModal
+        open={showLocModal}
+        onClose={() => setShowLocModal(false)}
+        location={locFilter ? { name: locFilter.name, lat: locFilter.lat, lng: locFilter.lng } : null}
+        radius={locFilter?.radius ?? 50}
+        onApply={applyLocation}
+      />
 
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
