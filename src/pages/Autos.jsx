@@ -576,13 +576,26 @@ export default function Autos({ user }) {
             `}</style>
             <div className="chips-track">
 
-              {/* ── Chip de ubicación ── */}
+              {/* ── Chip de ubicación (estilo tab como Home) ── */}
               <button
                 style={{
-                  ...pg.chip,
-                  ...(locFilter ? pg.chipActive : {}),
-                  display: "flex", alignItems: "center", gap: 4,
-                  whiteSpace: "nowrap", flexShrink: 0,
+                  flexShrink: 0,
+                  height: 32,
+                  padding: "0 12px",
+                  borderRadius: 0,
+                  fontSize: 12,
+                  fontWeight: locFilter ? 700 : 600,
+                  cursor: "pointer",
+                  border: "none",
+                  borderBottom: locFilter ? "2.5px solid #facc15" : "2.5px solid transparent",
+                  whiteSpace: "nowrap",
+                  transition: "all .15s",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 4,
+                  color: locFilter ? "#1e4b8f" : "#6b7280",
+                  background: "transparent",
+                  WebkitTapHighlightColor: "transparent",
                 }}
                 onClick={() => setShowLocModal(true)}
               >
