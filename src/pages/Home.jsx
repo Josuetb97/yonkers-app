@@ -641,7 +641,7 @@ export default function Home({ user, openLogin }) {
                 { label: "🏠  Inicio", action: () => { setShowMenu(false); } },
                 { label: "🔍  Buscar pieza", action: () => { setShowMenu(false); document.querySelector("input")?.focus(); } },
                 { label: "📋  Mis piezas", action: () => { setShowMenu(false); navigate("/my-pieces"); } },
-                { label: "💬  Mensajes", action: () => { setShowMenu(false); navigate("/messages"); } },
+                { label: "💬  Yonky", action: () => { setShowMenu(false); navigate("/messages"); } },
                 { label: "📣  Solicitar pieza", action: () => { setShowMenu(false); navigate("/request"); } },
                 ...(isSuperAdmin ? [
                   { label: "📊  Estadísticas", action: () => { setShowMenu(false); navigate("/stats"); } },
