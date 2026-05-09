@@ -637,6 +637,19 @@ export default function Autos({ user }) {
                 <SlidersHorizontal size={11} />
                 Rango
               </button>
+
+              {/* Separador + Limpiar — solo si hay filtros activos */}
+              {activeFilters > 0 && (
+                <>
+                  <div style={{ width: 1, background: "#e2e8f0", flexShrink: 0, margin: "2px 0" }} />
+                  <button
+                    style={{ ...pg.chip, color: "#ef4444", gap: 4, display: "flex", alignItems: "center" }}
+                    onClick={clearAll}
+                  >
+                    <X size={10} /> Limpiar
+                  </button>
+                </>
+              )}
             </div>
           </div>
 
@@ -655,16 +668,6 @@ export default function Autos({ user }) {
                   💰 L {fmt(minPrice || 0)} — {maxPrice ? `L ${fmt(maxPrice)}` : "sin límite"}
                 </div>
               )}
-            </div>
-          )}
-
-          {/* Resultados + limpiar — solo si hay filtros activos */}
-          {activeFilters > 0 && (
-            <div style={pg.activeRow}>
-              <span style={pg.activeCount}>{filtered.length} resultado{filtered.length !== 1 ? "s" : ""}</span>
-              <button style={pg.clearAllBtn} onClick={clearAll}>
-                <X size={11} /> Limpiar
-              </button>
             </div>
           )}
         </div>
