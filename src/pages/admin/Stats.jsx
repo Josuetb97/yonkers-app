@@ -1,16 +1,12 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { GoogleMap, Marker, InfoWindow } from "@react-google-maps/api";
 import { supabase } from "../../lib/supabase";
-import { useMaps } from "../../contexts/MapsContext";
 
 const SUPER_ADMIN_EMAILS = [
   "josuetb19997@gmail.com",
   "josuetaborab@gmail.com",
   "josuetabora2012@gmail.com",
 ];
-
-const HONDURAS_CENTER = { lat: 14.9, lng: -86.8 };
 
 /* ── KPI Card ── */
 function KpiCard({ label, value, icon, gradient, shadow }) {
@@ -70,8 +66,6 @@ export default function Stats({ user }) {
   });
   const [mapYonkers, setMapYonkers]   = useState([]);
   const [allApproved, setAllApproved] = useState([]);
-  const [selectedY, setSelectedY]     = useState(null);
-  const { isLoaded }                  = useMaps();
   const [loading, setLoading]         = useState(true);
 
   useEffect(() => {
@@ -297,47 +291,12 @@ export default function Stats({ user }) {
               </div>
             </div>
             <div style={{ height: 380 }}>
-              {!isLoaded ? (
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "#9ca3af", fontSize: 13 }}>
-                  Cargando mapa…
-                </div>
-              ) : (
-                <GoogleMap
-                  mapContainerStyle={{ width: "100%", height: "100%" }}
-                  center={HONDURAS_CENTER}
-                  zoom={7}
-                  options={{ fullscreenControl: false, mapTypeControl: false, streetViewControl: false, zoomControl: true }}
-                >
-                  {mapYonkers.map((y) => (
-                    <Marker
-                      key={y.id}
-                      position={{ lat: Number(y.lat), lng: Number(y.lng) }}
-                      icon={{ url: "http://maps.google.com/mapfiles/ms/icons/green-dot.png" }}
-                      onClick={() => setSelectedY(y)}
-                    />
-                  ))}
-                  {selectedY && (
-                    <InfoWindow
-                      position={{ lat: Number(selectedY.lat), lng: Number(selectedY.lng) }}
-                      onCloseClick={() => setSelectedY(null)}
-                    >
-                      <div style={{ maxWidth: 210 }}>
-                        <div style={{ fontWeight: 700, fontSize: 14, color: "#111" }}>{selectedY.name}</div>
-                        <div style={{ color: "#6b7280", fontSize: 13, margin: "4px 0 8px" }}>📍 {selectedY.city}</div>
-                        {selectedY.whatsapp && (
-                          <a
-                            href={`https://wa.me/${selectedY.whatsapp.replace(/\D/g, "")}`}
-                            target="_blank" rel="noreferrer"
-                            style={{ display: "inline-block", background: "#25D366", color: "#fff", padding: "5px 12px", borderRadius: 8, fontWeight: 700, fontSize: 13, textDecoration: "none" }}
-                          >
-                            💬 WhatsApp
-                          </a>
-                        )}
-                      </div>
-                    </InfoWindow>
-                  )}
-                </GoogleMap>
-              )}
+              <iframe
+                title="Mapa Honduras"
+                src="https://www.openstreetmap.org/export/embed.html?bbox=-89.4%2C13.0%2C-83.0%2C16.5&layer=mapnik"
+                style={{ width: "100%", height: "100%", border: "none", display: "block" }}
+                loading="lazy"
+              />
             </div>
           </div>
 
