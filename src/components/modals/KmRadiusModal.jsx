@@ -1,4 +1,4 @@
-import { X, MapPin, Navigation } from "lucide-react";
+import { X, MapPin, Navigation, LocateFixed, Loader } from "lucide-react";
 import { useState, useMemo } from "react";
 import { GoogleMap, Circle, Marker } from "@react-google-maps/api";
 
@@ -151,11 +151,60 @@ function RadiusVisual({ city, km }) {
 /* ─────────────────────────────────────────────────────────
    Modal principal
 ───────────────────────────────────────────────────────── */
+/* Haversine para encontrar la ciudad más cercana */
+function haversine(lat1, lng1, lat2, lng2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
 export default function KmRadiusModal({ open, onClose, location, radius, onApply }) {
-  const [inputText, setInputText] = useState(location?.name || "");
-  const [localLoc,  setLocalLoc]  = useState(location  || null);
-  const [localKm,   setLocalKm]   = useState(radius    || 50);
-  const [showDrop,  setShowDrop]  = useState(false);
+  const [inputText,  setInputText]  = useState(location?.name || "");
+  const [localLoc,   setLocalLoc]   = useState(location  || null);
+  const [localKm,    setLocalKm]    = useState(radius    || 50);
+  const [showDrop,   setShowDrop]   = useState(false);
+  const [gpsLoading, setGpsLoading] = useState(false);
+  const [gpsError,   setGpsError]   = useState("");
+
+  /* ── Usar ubicación del dispositivo ── */
+  function useDeviceLocation() {
+    if (!navigator.geolocation) {
+      setGpsError("Tu dispositivo no soporta GPS.");
+      return;
+    }
+    setGpsLoading(true);
+    setGpsError("");
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const { latitude: lat, longitude: lng } = pos.coords;
+
+        // Buscar la ciudad más cercana de la lista
+        let closest = null;
+        let minDist = Infinity;
+        HN_CITIES.forEach((c) => {
+          const d = haversine(lat, lng, c.lat, c.lng);
+          if (d < minDist) { minDist = d; closest = c; }
+        });
+
+        // Si la ciudad más cercana está a menos de 60 km, usarla como nombre
+        const name = (closest && minDist < 60) ? closest.name : "Mi ubicación";
+        const city = { name, lat, lng };
+        setLocalLoc(city);
+        setInputText(name);
+        setShowDrop(false);
+        setGpsLoading(false);
+      },
+      (err) => {
+        setGpsLoading(false);
+        if (err.code === 1) setGpsError("Permiso de ubicación denegado.");
+        else if (err.code === 2) setGpsError("No se pudo obtener la ubicación.");
+        else setGpsError("Tiempo de espera agotado.");
+      },
+      { timeout: 10000, enableHighAccuracy: true }
+    );
+  }
 
   /* Sugerencias mientras el usuario escribe */
   const suggestions = useMemo(() => {
@@ -193,6 +242,7 @@ export default function KmRadiusModal({ open, onClose, location, radius, onApply
 
   return (
     <div style={s.overlay} onClick={onClose}>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       <div style={s.modal} onClick={(e) => e.stopPropagation()}>
 
         {/* ── Encabezado ── */}
@@ -246,6 +296,33 @@ export default function KmRadiusModal({ open, onClose, location, radius, onApply
               </div>
             )}
           </div>
+
+          {/* ── Botón GPS ── */}
+          <button
+            type="button"
+            onClick={useDeviceLocation}
+            disabled={gpsLoading}
+            style={{
+              display: "flex", alignItems: "center", gap: 8,
+              width: "100%", marginBottom: 10,
+              background: gpsLoading ? "#2d2e2f" : "rgba(35,116,225,0.13)",
+              border: "1px solid rgba(35,116,225,0.35)",
+              borderRadius: 10, padding: "10px 14px",
+              color: "#4b9eff", fontWeight: 600, fontSize: 14,
+              cursor: gpsLoading ? "default" : "pointer",
+              transition: "background 0.2s",
+            }}
+          >
+            {gpsLoading
+              ? <Loader size={16} style={{ animation: "spin 1s linear infinite" }} />
+              : <LocateFixed size={16} />}
+            {gpsLoading ? "Obteniendo ubicación…" : "Usar mi ubicación actual"}
+          </button>
+          {gpsError && (
+            <p style={{ margin: "0 0 8px", fontSize: 12, color: "#ef4444" }}>
+              ⚠️ {gpsError}
+            </p>
+          )}
 
           {/* ── Selector de radio ── */}
           <div style={{ ...s.inputBox, marginBottom: 12 }}>
