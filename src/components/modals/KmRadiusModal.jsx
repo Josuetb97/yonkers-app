@@ -340,15 +340,20 @@ export default function KmRadiusModal({ open, onClose, location, radius, onApply
           </div>
         </div>
 
-        {/* ── Mapa preview (Static Maps API — sin conflictos JS) ── */}
+        {/* ── Mapa preview (OpenStreetMap embed — sin API key) ── */}
         <div style={s.mapWrap}>
-          {localLoc ? (
-            <img
-              src={`https://maps.googleapis.com/maps/api/staticmap?center=${localLoc.lat},${localLoc.lng}&zoom=${localKm <= 20 ? 11 : localKm <= 60 ? 9 : localKm <= 120 ? 8 : 7}&size=400x200&markers=color:blue%7C${localLoc.lat},${localLoc.lng}&style=feature:poi%7Cvisibility:off&key=${import.meta.env.VITE_GOOGLE_MAPS_KEY}`}
-              style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-              alt="Mapa de ubicación"
-            />
-          ) : (
+          {localLoc ? (() => {
+            const offset = Math.min(2.5, Math.max(0.08, localKm / 111));
+            const bbox = `${localLoc.lng - offset},${localLoc.lat - offset},${localLoc.lng + offset},${localLoc.lat + offset}`;
+            return (
+              <iframe
+                title="Mapa de ubicación"
+                src={`https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${localLoc.lat},${localLoc.lng}`}
+                style={{ width: "100%", height: "100%", border: "none", display: "block" }}
+                loading="lazy"
+              />
+            );
+          })() : (
             <RadiusVisual city={null} km={localKm} />
           )}
         </div>
