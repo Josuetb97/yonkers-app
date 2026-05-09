@@ -5,6 +5,7 @@ import {
   DirectionsRenderer,
 } from "@react-google-maps/api";
 import { useEffect, useState, useCallback } from "react";
+import { useMaps } from "../../contexts/MapsContext";
 
 const containerStyle = {
   width: "100%",
@@ -17,6 +18,7 @@ export default function NearbyMap({
   selectedId,
   onSelectId,
 }) {
+  const { isLoaded } = useMaps();
   const [selectedPiece, setSelectedPiece] = useState(null);
   const [directions, setDirections] = useState(null);
 
@@ -67,6 +69,8 @@ export default function NearbyMap({
     const url = `https://www.google.com/maps/dir/?api=1&destination=${piece.lat},${piece.lng}`;
     window.open(url, "_blank");
   };
+
+  if (!isLoaded) return <p style={{ padding: 12, color: "#9ca3af", fontSize: 13 }}>Cargando mapa…</p>;
 
   return (
     <GoogleMap

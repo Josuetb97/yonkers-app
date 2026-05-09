@@ -1,6 +1,7 @@
 import { X, MapPin, Navigation, LocateFixed, Loader } from "lucide-react";
 import { useState, useMemo } from "react";
 import { GoogleMap, Circle, Marker } from "@react-google-maps/api";
+import { useMaps } from "../../contexts/MapsContext";
 
 /* ─────────────────────────────────────────────────────────
    Ciudades de Honduras con coordenadas
@@ -167,6 +168,7 @@ export default function KmRadiusModal({ open, onClose, location, radius, onApply
   const [showDrop,   setShowDrop]   = useState(false);
   const [gpsLoading, setGpsLoading] = useState(false);
   const [gpsError,   setGpsError]   = useState("");
+  const { isLoaded } = useMaps();
 
   /* ── Usar ubicación del dispositivo ── */
   function useDeviceLocation() {
@@ -343,7 +345,7 @@ export default function KmRadiusModal({ open, onClose, location, radius, onApply
 
         {/* ── Mapa real con círculo de radio ── */}
         <div style={s.mapWrap}>
-          {localLoc ? (
+          {localLoc && isLoaded ? (
             <GoogleMap
               mapContainerStyle={{ width: "100%", height: "100%" }}
               center={{ lat: localLoc.lat, lng: localLoc.lng }}

@@ -1,11 +1,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  GoogleMap,
-  Marker,
-  InfoWindow,
-} from "@react-google-maps/api";
+import { GoogleMap, Marker, InfoWindow } from "@react-google-maps/api";
 import { supabase } from "../../lib/supabase";
+import { useMaps } from "../../contexts/MapsContext";
 
 /* ──────────────────────────────────────
    Constantes
@@ -64,6 +61,7 @@ export default function Stats({ user }) {
   const [mapYonkers, setMapYonkers]     = useState([]);
   const [allApproved, setAllApproved]   = useState([]);
   const [selectedY, setSelectedY]       = useState(null);
+  const { isLoaded }                    = useMaps();
   const [loading, setLoading]           = useState(true);
 
   /* Guard: solo super admin */
@@ -257,7 +255,11 @@ export default function Stats({ user }) {
               </div>
 
               <div style={{ height: 420 }}>
-                <GoogleMap
+                {!isLoaded ? (
+                  <div style={{ display:"flex", alignItems:"center", justifyContent:"center", height:"100%", color:"#9ca3af" }}>
+                    Cargando mapa…
+                  </div>
+                ) : <GoogleMap
                   mapContainerStyle={{ width: "100%", height: "100%" }}
                   center={HONDURAS_CENTER}
                   zoom={7}
@@ -304,7 +306,7 @@ export default function Stats({ user }) {
                       </div>
                     </InfoWindow>
                   )}
-                </GoogleMap>
+                </GoogleMap>}
               </div>
             </div>
 
