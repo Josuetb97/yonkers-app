@@ -567,8 +567,8 @@ export default function Autos({ user }) {
           </>
         )}
 
-        {/* ── BANNER ÚNETE — al final del contenido, fuera del flujo de cards ── */}
-        {!isOwner && !loading && (
+        {/* ── BANNER ÚNETE — al final del contenido, siempre visible ── */}
+        {!loading && (
           <div style={pg.joinBanner} onClick={() => navigate("/autolote-solicitud")}>
             <div style={pg.joinLeft}>
               <div style={pg.joinIconWrap}>🚗</div>

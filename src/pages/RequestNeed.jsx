@@ -2,6 +2,7 @@ import React, { useRef, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { compressImages } from "../lib/compressImage";
 import { supabase } from "../lib/supabase";
+import { DEPARTAMENTOS, MUNICIPIOS_POR_DEPTO } from "../data/honduras";
 
 /* ─── Spinner ─── */
 function Spinner({ size = 16, color = "#fff" }) {
@@ -46,7 +47,7 @@ export default function RequestNeed() {
   const cameraRef   = useRef();
   const galleryRef  = useRef();
 
-  const EMPTY = { title: "", brand: "", years: "", city: "", description: "", whatsapp: "" };
+  const EMPTY = { title: "", brand: "", years: "", city: "", municipio: "", description: "", whatsapp: "" };
 
   const [form,       setForm]       = useState(EMPTY);
   const [files,      setFiles]      = useState([]);
@@ -115,7 +116,9 @@ export default function RequestNeed() {
           title:       form.title.trim(),
           brand:       form.brand?.trim()       || "",
           years:       form.years?.trim()       || "",
-          city:        form.city?.trim()        || "",
+          city:        form.city === "todo"
+                         ? "Todo Honduras"
+                         : [form.municipio?.trim(), form.city?.trim()].filter(Boolean).join(", ") || "",
           description: form.description?.trim() || "",
           whatsapp:    form.whatsapp.trim(),
           images:      imageUrls,
@@ -134,7 +137,9 @@ export default function RequestNeed() {
           body: JSON.stringify({
             title:    form.title.trim(),
             brand:    form.brand?.trim()    || "",
-            city:     form.city?.trim()     || "",
+            city:     form.city === "todo"
+                        ? "Todo Honduras"
+                        : [form.municipio?.trim(), form.city?.trim()].filter(Boolean).join(", ") || "",
             whatsapp: form.whatsapp.trim(),
             images:   imageUrls,
           }),
@@ -356,38 +361,44 @@ export default function RequestNeed() {
               </div>
             </div>
 
-            {/* Ciudad */}
+            {/* Ubicación en cascada: Departamento → Municipio */}
             <div style={st.field}>
-              <label style={st.label}>Ciudad / Departamento</label>
+              <label style={st.label}>Departamento</label>
               <select
                 className="rn-input"
                 name="city"
                 value={form.city}
-                onChange={handleChange}
+                onChange={(e) => {
+                  setForm((f) => ({ ...f, city: e.target.value, municipio: "" }));
+                }}
                 style={{ ...st.input, backgroundColor: "#fff", cursor: "pointer" }}
               >
-                <option value="">Selecciona tu ciudad...</option>
-                <option value="todo">🇭🇳 Todo Honduras (todos los departamentos)</option>
-                <option value="Atlántida">Atlántida</option>
-                <option value="Choluteca">Choluteca</option>
-                <option value="Colón">Colón</option>
-                <option value="Comayagua">Comayagua</option>
-                <option value="Copán">Copán</option>
-                <option value="Cortés">Cortés</option>
-                <option value="El Paraíso">El Paraíso</option>
-                <option value="Francisco Morazán">Francisco Morazán</option>
-                <option value="Gracias a Dios">Gracias a Dios</option>
-                <option value="Intibucá">Intibucá</option>
-                <option value="Islas de la Bahía">Islas de la Bahía</option>
-                <option value="La Paz">La Paz</option>
-                <option value="Lempira">Lempira</option>
-                <option value="Ocotepeque">Ocotepeque</option>
-                <option value="Olancho">Olancho</option>
-                <option value="Santa Bárbara">Santa Bárbara</option>
-                <option value="Valle">Valle</option>
-                <option value="Yoro">Yoro</option>
+                <option value="">Selecciona el departamento...</option>
+                <option value="todo">🇭🇳 Todo Honduras</option>
+                {DEPARTAMENTOS.map((d) => (
+                  <option key={d.nombre} value={d.nombre}>{d.nombre}</option>
+                ))}
               </select>
             </div>
+
+            {/* Municipio — solo aparece si hay departamento seleccionado (y no es "todo") */}
+            {form.city && form.city !== "todo" && (
+              <div style={st.field}>
+                <label style={st.label}>Municipio</label>
+                <select
+                  className="rn-input"
+                  name="municipio"
+                  value={form.municipio}
+                  onChange={handleChange}
+                  style={{ ...st.input, backgroundColor: "#fff", cursor: "pointer" }}
+                >
+                  <option value="">Selecciona el municipio...</option>
+                  {(MUNICIPIOS_POR_DEPTO[form.city] || []).map((m) => (
+                    <option key={m} value={m}>{m}</option>
+                  ))}
+                </select>
+              </div>
+            )}
 
 
           </div>

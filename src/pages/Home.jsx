@@ -47,6 +47,12 @@ const EMPTY_FILTERS = {
   yearTo:    "",
 };
 
+const SUPER_ADMIN_EMAILS = [
+  "josuetb19997@gmail.com",
+  "josuetaborab@gmail.com",
+  "josuetabora2012@gmail.com",
+];
+
 export default function Home({ user, openLogin }) {
   const navigate   = useNavigate();
   const { track }  = useAnalytics();
@@ -67,7 +73,40 @@ export default function Home({ user, openLogin }) {
   const [showFavs,       setShowFavs]       = useState(false);
   const [showPhotoModal, setShowPhotoModal] = useState(false);
   const [showMenu,       setShowMenu]       = useState(false);
+  const [showUserMenu,   setShowUserMenu]   = useState(false);
+  const [isAutolote,     setIsAutolote]     = useState(false);
   const [voiceError,     setVoiceError]     = useState("");
+  const userMenuRef = useRef(null);
+
+  const isSuperAdmin = SUPER_ADMIN_EMAILS.includes(user?.email ?? "");
+
+  /* Verificar si es dueño de autolote aprobado */
+  useEffect(() => {
+    if (!user || isSuperAdmin) return;
+    supabase
+      .from("autolote_profiles")
+      .select("status")
+      .eq("owner_id", user.id)
+      .maybeSingle()
+      .then(({ data }) => { if (data?.status === "approved") setIsAutolote(true); });
+  }, [user]);
+
+  /* Cerrar el menú de usuario al hacer click fuera */
+  useEffect(() => {
+    if (!showUserMenu) return;
+    function handleOutside(e) {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target)) {
+        setShowUserMenu(false);
+      }
+    }
+    document.addEventListener("mousedown", handleOutside);
+    return () => document.removeEventListener("mousedown", handleOutside);
+  }, [showUserMenu]);
+
+  async function handleLogout() {
+    await supabase.auth.signOut();
+    setShowUserMenu(false);
+  }
 
   /* ── Voz ── */
   const { listening, supported: voiceSupported, startListening, stopListening } = useVoiceSearch({
@@ -199,6 +238,9 @@ export default function Home({ user, openLogin }) {
 
   return (
     <div style={st.page}>
+      <style>{`
+        @keyframes fadeIn { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:translateY(0); } }
+      `}</style>
 
       {/* ══════════════════════════════
           TOP AREA — fijo
@@ -227,8 +269,65 @@ export default function Home({ user, openLogin }) {
                 Login
               </button>
             ) : (
-              <div style={st.avatar}>
-                {user.email?.charAt(0).toUpperCase()}
+              <div ref={userMenuRef} style={{ position: "absolute", right: 14, zIndex: 200 }}>
+                {/* Avatar botón */}
+                <button
+                  onClick={() => setShowUserMenu((v) => !v)}
+                  style={{ ...st.avatar, position: "relative", cursor: "pointer", border: "none" }}
+                  aria-label="Menú de usuario"
+                >
+                  {user.user_metadata?.avatar_url ? (
+                    <img
+                      src={user.user_metadata.avatar_url}
+                      alt=""
+                      style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }}
+                      onError={(e) => { e.currentTarget.style.display = "none"; }}
+                    />
+                  ) : (
+                    user.email?.charAt(0).toUpperCase()
+                  )}
+                </button>
+
+                {/* Dropdown */}
+                {showUserMenu && (
+                  <div style={st.userDropdown}>
+                    {/* Info usuario */}
+                    <div style={st.dropdownHeader}>
+                      <div style={st.dropdownAvatar}>
+                        {user.email?.charAt(0).toUpperCase()}
+                      </div>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={st.dropdownName}>
+                          {user.user_metadata?.full_name || user.user_metadata?.name || "Mi cuenta"}
+                        </div>
+                        <div style={st.dropdownEmail}>{user.email}</div>
+                      </div>
+                    </div>
+
+                    <div style={st.dropdownDivider} />
+
+                    {/* Opciones según rol */}
+                    {isSuperAdmin && (
+                      <button style={st.dropdownItem} onClick={() => { navigate("/admin"); setShowUserMenu(false); }}>
+                        <span style={st.dropdownItemIcon}>🛡️</span>
+                        Panel Admin
+                      </button>
+                    )}
+                    {(isSuperAdmin || isAutolote) && (
+                      <button style={st.dropdownItem} onClick={() => { navigate("/my-pieces"); setShowUserMenu(false); }}>
+                        <span style={st.dropdownItemIcon}>🚗</span>
+                        Mi autolote
+                      </button>
+                    )}
+
+                    <div style={st.dropdownDivider} />
+
+                    <button style={{ ...st.dropdownItem, color: "#ef4444" }} onClick={handleLogout}>
+                      <span style={st.dropdownItemIcon}>🚪</span>
+                      Cerrar sesión
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </header>
@@ -726,10 +825,9 @@ const st = {
   },
 
   avatar: {
-    position: "absolute",
-    right: 14,
-    width: 30,
-    height: 30,
+    position: "relative",
+    width: 32,
+    height: 32,
     borderRadius: "50%",
     background: "#facc15",
     display: "flex",
@@ -738,6 +836,58 @@ const st = {
     fontWeight: 700,
     fontSize: 13,
     color: "#111",
+    flexShrink: 0,
+    overflow: "hidden",
+  },
+
+  userDropdown: {
+    position: "absolute",
+    top: "calc(100% + 10px)",
+    right: 0,
+    width: 220,
+    background: "#fff",
+    borderRadius: 14,
+    boxShadow: "0 8px 30px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.06)",
+    overflow: "hidden",
+    animation: "fadeIn 0.15s ease",
+  },
+  dropdownHeader: {
+    display: "flex",
+    alignItems: "center",
+    gap: 10,
+    padding: "14px 14px 12px",
+    background: "#f8fafc",
+  },
+  dropdownAvatar: {
+    width: 36, height: 36,
+    borderRadius: "50%",
+    background: "#1e3a8a",
+    color: "#facc15",
+    display: "flex", alignItems: "center", justifyContent: "center",
+    fontWeight: 800, fontSize: 14, flexShrink: 0,
+  },
+  dropdownName: {
+    fontSize: 13, fontWeight: 700, color: "#0f172a",
+    whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+  },
+  dropdownEmail: {
+    fontSize: 11, color: "#94a3b8",
+    whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+  },
+  dropdownDivider: {
+    height: 1, background: "#f1f5f9",
+  },
+  dropdownItem: {
+    display: "flex", alignItems: "center", gap: 10,
+    width: "100%", padding: "11px 14px",
+    background: "none", border: "none",
+    fontSize: 13, fontWeight: 600, color: "#374151",
+    cursor: "pointer", textAlign: "left",
+    transition: "background 0.1s",
+    fontFamily: "system-ui, sans-serif",
+  },
+  dropdownItemIcon: {
+    fontSize: 16, flexShrink: 0,
   },
 
   searchRow: {

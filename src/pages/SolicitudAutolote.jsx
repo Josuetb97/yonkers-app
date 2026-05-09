@@ -71,6 +71,9 @@ export default function SolicitudAutolote() {
           city:        form.city.trim(),
           whatsapp:    form.whatsapp.replace(/\D/g, ""),
           email:       form.email.trim(),
+          instagram:   form.instagram.trim(),
+          facebook:    form.facebook.trim(),
+          tiktok:      form.tiktok.trim(),
           description: form.description.trim(),
         }),
       }).catch(() => {});
