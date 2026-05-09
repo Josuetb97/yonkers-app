@@ -1,74 +1,160 @@
-import { X, MapPin } from "lucide-react";
+import { X, MapPin, Navigation } from "lucide-react";
 import { useState, useMemo } from "react";
-import { GoogleMap, Circle, Marker, useJsApiLoader } from "@react-google-maps/api";
 
 /* ─────────────────────────────────────────────────────────
    Ciudades de Honduras con coordenadas
 ───────────────────────────────────────────────────────── */
 export const HN_CITIES = [
-  { name: "Tegucigalpa",        dept: "Francisco Morazán", lat: 14.0818, lng: -87.2068 },
-  { name: "San Pedro Sula",     dept: "Cortés",            lat: 15.4997, lng: -88.0255 },
-  { name: "Choloma",            dept: "Cortés",            lat: 15.6167, lng: -87.9500 },
-  { name: "La Ceiba",           dept: "Atlántida",         lat: 15.7667, lng: -86.8000 },
-  { name: "El Progreso",        dept: "Yoro",              lat: 15.4000, lng: -87.8000 },
-  { name: "Comayagua",          dept: "Comayagua",         lat: 14.4500, lng: -87.6330 },
-  { name: "Puerto Cortés",      dept: "Cortés",            lat: 15.8330, lng: -87.9330 },
-  { name: "Siguatepeque",       dept: "Comayagua",         lat: 14.6000, lng: -87.8330 },
-  { name: "Juticalpa",          dept: "Olancho",           lat: 14.6660, lng: -86.2330 },
-  { name: "Danlí",              dept: "El Paraíso",        lat: 14.0330, lng: -86.5830 },
-  { name: "Choluteca",          dept: "Choluteca",         lat: 13.3000, lng: -87.2000 },
-  { name: "Santa Rosa de Copán",dept: "Copán",             lat: 14.7670, lng: -88.7830 },
-  { name: "Tela",               dept: "Atlántida",         lat: 15.7830, lng: -87.4330 },
-  { name: "Tocoa",              dept: "Colón",             lat: 15.6830, lng: -86.0000 },
-  { name: "Olanchito",          dept: "Yoro",              lat: 15.4830, lng: -86.5830 },
-  { name: "Trujillo",           dept: "Colón",             lat: 15.9170, lng: -85.9670 },
-  { name: "Yoro",               dept: "Yoro",              lat: 15.1330, lng: -87.1170 },
-  { name: "Nacaome",            dept: "Valle",             lat: 13.4830, lng: -87.5000 },
-  { name: "Nueva Ocotepeque",   dept: "Ocotepeque",        lat: 14.4330, lng: -89.1830 },
-  { name: "Gracias",            dept: "Lempira",           lat: 14.5830, lng: -88.5830 },
-  { name: "La Paz",             dept: "La Paz",            lat: 14.3170, lng: -87.6830 },
-  { name: "Intibucá",           dept: "Intibucá",          lat: 14.3170, lng: -88.1670 },
-  { name: "Santa Bárbara",      dept: "Santa Bárbara",     lat: 14.9170, lng: -88.2330 },
-  { name: "La Lima",            dept: "Cortés",            lat: 15.4330, lng: -87.9170 },
-  { name: "Villanueva",         dept: "Cortés",            lat: 15.3330, lng: -88.0170 },
-  { name: "San Lorenzo",        dept: "Valle",             lat: 13.4170, lng: -87.4500 },
-  { name: "Roatán",             dept: "Islas de la Bahía", lat: 16.3170, lng: -86.5330 },
-  { name: "Catacamas",          dept: "Olancho",           lat: 14.8000, lng: -85.9000 },
-  { name: "El Paraíso",         dept: "El Paraíso",        lat: 13.8670, lng: -86.6000 },
-  { name: "Marcala",            dept: "La Paz",            lat: 14.1670, lng: -88.0000 },
-  { name: "Santa Cruz de Yojoa",dept: "Cortés",            lat: 15.0000, lng: -87.9000 },
-  { name: "Copán Ruinas",       dept: "Copán",             lat: 14.8330, lng: -89.1330 },
-  { name: "Cofradia",           dept: "Cortés",            lat: 15.4000, lng: -87.9670 },
-  { name: "Potrerillos",        dept: "Cortés",            lat: 15.2500, lng: -87.9830 },
-  { name: "Omoa",               dept: "Cortés",            lat: 15.7500, lng: -88.0330 },
-  { name: "Pimienta",           dept: "Cortés",            lat: 15.2670, lng: -87.9500 },
-  { name: "Naco",               dept: "Cortés",            lat: 15.1330, lng: -88.0170 },
-  { name: "San Manuel",         dept: "Cortés",            lat: 15.2170, lng: -87.9170 },
-  { name: "Armenia",            dept: "Cortés",            lat: 15.3170, lng: -87.9170 },
-  { name: "Quimistán",          dept: "Santa Bárbara",     lat: 15.2000, lng: -88.4330 },
-  { name: "Morazán",            dept: "Yoro",              lat: 15.2330, lng: -87.5000 },
-  { name: "Taulabé",            dept: "Comayagua",         lat: 14.8500, lng: -87.8670 },
-  { name: "Cedros",             dept: "Francisco Morazán", lat: 14.5830, lng: -87.1830 },
-  { name: "Amarateca",          dept: "Francisco Morazán", lat: 14.2330, lng: -87.1330 },
-  { name: "Talanga",            dept: "Francisco Morazán", lat: 14.4170, lng: -87.0670 },
+  { name: "Tegucigalpa",         dept: "Francisco Morazán", lat: 14.0818, lng: -87.2068 },
+  { name: "San Pedro Sula",      dept: "Cortés",            lat: 15.4997, lng: -88.0255 },
+  { name: "Choloma",             dept: "Cortés",            lat: 15.6167, lng: -87.9500 },
+  { name: "La Ceiba",            dept: "Atlántida",         lat: 15.7667, lng: -86.8000 },
+  { name: "El Progreso",         dept: "Yoro",              lat: 15.4000, lng: -87.8000 },
+  { name: "Comayagua",           dept: "Comayagua",         lat: 14.4500, lng: -87.6330 },
+  { name: "Puerto Cortés",       dept: "Cortés",            lat: 15.8330, lng: -87.9330 },
+  { name: "Siguatepeque",        dept: "Comayagua",         lat: 14.6000, lng: -87.8330 },
+  { name: "Juticalpa",           dept: "Olancho",           lat: 14.6660, lng: -86.2330 },
+  { name: "Danlí",               dept: "El Paraíso",        lat: 14.0330, lng: -86.5830 },
+  { name: "Choluteca",           dept: "Choluteca",         lat: 13.3000, lng: -87.2000 },
+  { name: "Santa Rosa de Copán", dept: "Copán",             lat: 14.7670, lng: -88.7830 },
+  { name: "Tela",                dept: "Atlántida",         lat: 15.7830, lng: -87.4330 },
+  { name: "Tocoa",               dept: "Colón",             lat: 15.6830, lng: -86.0000 },
+  { name: "Olanchito",           dept: "Yoro",              lat: 15.4830, lng: -86.5830 },
+  { name: "Trujillo",            dept: "Colón",             lat: 15.9170, lng: -85.9670 },
+  { name: "Yoro",                dept: "Yoro",              lat: 15.1330, lng: -87.1170 },
+  { name: "Nacaome",             dept: "Valle",             lat: 13.4830, lng: -87.5000 },
+  { name: "Nueva Ocotepeque",    dept: "Ocotepeque",        lat: 14.4330, lng: -89.1830 },
+  { name: "Gracias",             dept: "Lempira",           lat: 14.5830, lng: -88.5830 },
+  { name: "La Paz",              dept: "La Paz",            lat: 14.3170, lng: -87.6830 },
+  { name: "Intibucá",            dept: "Intibucá",          lat: 14.3170, lng: -88.1670 },
+  { name: "Santa Bárbara",       dept: "Santa Bárbara",     lat: 14.9170, lng: -88.2330 },
+  { name: "La Lima",             dept: "Cortés",            lat: 15.4330, lng: -87.9170 },
+  { name: "Villanueva",          dept: "Cortés",            lat: 15.3330, lng: -88.0170 },
+  { name: "San Lorenzo",         dept: "Valle",             lat: 13.4170, lng: -87.4500 },
+  { name: "Roatán",              dept: "Islas de la Bahía", lat: 16.3170, lng: -86.5330 },
+  { name: "Catacamas",           dept: "Olancho",           lat: 14.8000, lng: -85.9000 },
+  { name: "El Paraíso",          dept: "El Paraíso",        lat: 13.8670, lng: -86.6000 },
+  { name: "Marcala",             dept: "La Paz",            lat: 14.1670, lng: -88.0000 },
+  { name: "Santa Cruz de Yojoa", dept: "Cortés",            lat: 15.0000, lng: -87.9000 },
+  { name: "Copán Ruinas",        dept: "Copán",             lat: 14.8330, lng: -89.1330 },
+  { name: "Cofradia",            dept: "Cortés",            lat: 15.4000, lng: -87.9670 },
+  { name: "Potrerillos",         dept: "Cortés",            lat: 15.2500, lng: -87.9830 },
+  { name: "Omoa",                dept: "Cortés",            lat: 15.7500, lng: -88.0330 },
+  { name: "Pimienta",            dept: "Cortés",            lat: 15.2670, lng: -87.9500 },
+  { name: "Naco",                dept: "Cortés",            lat: 15.1330, lng: -88.0170 },
+  { name: "San Manuel",          dept: "Cortés",            lat: 15.2170, lng: -87.9170 },
+  { name: "Armenia",             dept: "Cortés",            lat: 15.3170, lng: -87.9170 },
+  { name: "Quimistán",           dept: "Santa Bárbara",     lat: 15.2000, lng: -88.4330 },
+  { name: "Morazán",             dept: "Yoro",              lat: 15.2330, lng: -87.5000 },
+  { name: "Taulabé",             dept: "Comayagua",         lat: 14.8500, lng: -87.8670 },
+  { name: "Talanga",             dept: "Francisco Morazán", lat: 14.4170, lng: -87.0670 },
+  { name: "Amarateca",           dept: "Francisco Morazán", lat: 14.2330, lng: -87.1330 },
 ];
 
 export const RADIUS_OPTIONS = [5, 10, 25, 50, 71, 100, 150, 200];
 
-const HN_CENTER = { lat: 14.9, lng: -86.8 };
+/* ─────────────────────────────────────────────────────────
+   Visual de radio (SVG decorativo, sin Google Maps)
+───────────────────────────────────────────────────────── */
+function RadiusVisual({ city, km }) {
+  /* Tamaño del círculo proporcional al radio (entre 30 y 90 px) */
+  const r = Math.min(90, Math.max(30, km === 99999 ? 90 : km * 0.55));
+
+  return (
+    <div style={{
+      position: "relative",
+      width: "100%", height: "100%",
+      background: "linear-gradient(160deg, #1a1c2a 0%, #0f1525 100%)",
+      display: "flex", alignItems: "center", justifyContent: "center",
+      overflow: "hidden",
+    }}>
+      {/* Cuadrícula de fondo tipo mapa */}
+      <svg style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity: 0.12 }}>
+        <defs>
+          <pattern id="grid" width="24" height="24" patternUnits="userSpaceOnUse">
+            <path d="M 24 0 L 0 0 0 24" fill="none" stroke="#4b9eff" strokeWidth="0.5"/>
+          </pattern>
+        </defs>
+        <rect width="100%" height="100%" fill="url(#grid)" />
+      </svg>
+
+      {/* Círculo exterior (radio) */}
+      <div style={{
+        position: "absolute",
+        width: r * 2 + "px", height: r * 2 + "px",
+        borderRadius: "50%",
+        border: "1.5px solid rgba(79,140,255,0.55)",
+        background: "rgba(35,116,225,0.10)",
+        transform: "translate(-50%,-50%)",
+        left: "50%", top: "50%",
+        transition: "all 0.4s ease",
+      }} />
+
+      {/* Círculo interior */}
+      <div style={{
+        position: "absolute",
+        width: r * 0.5 + "px", height: r * 0.5 + "px",
+        borderRadius: "50%",
+        border: "1px dashed rgba(79,140,255,0.4)",
+        transform: "translate(-50%,-50%)",
+        left: "50%", top: "50%",
+        transition: "all 0.4s ease",
+      }} />
+
+      {/* Pin central */}
+      <div style={{
+        position: "relative", zIndex: 2,
+        display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
+      }}>
+        <div style={{
+          width: 36, height: 36, borderRadius: "50%",
+          background: "#2374e1",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          boxShadow: "0 0 0 6px rgba(35,116,225,0.25)",
+        }}>
+          <MapPin size={18} color="#fff" fill="#fff" />
+        </div>
+        {city && (
+          <div style={{
+            background: "rgba(20,20,30,0.85)",
+            border: "1px solid rgba(255,255,255,0.12)",
+            borderRadius: 20,
+            padding: "4px 12px",
+            color: "#e4e6eb",
+            fontSize: 12,
+            fontWeight: 700,
+            whiteSpace: "nowrap",
+          }}>
+            {city}
+          </div>
+        )}
+      </div>
+
+      {/* Etiqueta de radio */}
+      <div style={{
+        position: "absolute",
+        bottom: 10, right: 12,
+        background: "rgba(35,116,225,0.85)",
+        borderRadius: 20,
+        padding: "3px 10px",
+        color: "#fff",
+        fontSize: 11,
+        fontWeight: 700,
+      }}>
+        {km >= 99999 ? "Todo el país" : `${km} km`}
+      </div>
+    </div>
+  );
+}
 
 /* ─────────────────────────────────────────────────────────
    Modal principal
 ───────────────────────────────────────────────────────── */
 export default function KmRadiusModal({ open, onClose, location, radius, onApply }) {
-  const [inputText,    setInputText]    = useState(location?.name || "");
-  const [localLoc,     setLocalLoc]     = useState(location  || null);
-  const [localKm,      setLocalKm]      = useState(radius    || 50);
-  const [showDrop,     setShowDrop]     = useState(false);
-
-  const { isLoaded } = useJsApiLoader({
-    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_KEY,
-  });
+  const [inputText, setInputText] = useState(location?.name || "");
+  const [localLoc,  setLocalLoc]  = useState(location  || null);
+  const [localKm,   setLocalKm]   = useState(radius    || 50);
+  const [showDrop,  setShowDrop]  = useState(false);
 
   /* Sugerencias mientras el usuario escribe */
   const suggestions = useMemo(() => {
@@ -104,14 +190,6 @@ export default function KmRadiusModal({ open, onClose, location, radius, onApply
 
   if (!open) return null;
 
-  const mapCenter = localLoc
-    ? { lat: localLoc.lat, lng: localLoc.lng }
-    : HN_CENTER;
-
-  const mapZoom = localLoc
-    ? (localKm <= 20 ? 11 : localKm <= 60 ? 9 : localKm <= 120 ? 8 : 7)
-    : 7;
-
   return (
     <div style={s.overlay} onClick={onClose}>
       <div style={s.modal} onClick={(e) => e.stopPropagation()}>
@@ -136,11 +214,9 @@ export default function KmRadiusModal({ open, onClose, location, radius, onApply
                 value={inputText}
                 autoComplete="off"
                 style={s.textInput}
-                onChange={(e) => {
-                  setInputText(e.target.value);
-                  setShowDrop(true);
-                }}
+                onChange={(e) => { setInputText(e.target.value); setShowDrop(true); }}
                 onFocus={() => setShowDrop(true)}
+                onBlur={() => setTimeout(() => setShowDrop(false), 120)}
               />
               {inputText.length > 0 && (
                 <button type="button" onClick={clearCity} style={s.clearBtn}>
@@ -171,7 +247,9 @@ export default function KmRadiusModal({ open, onClose, location, radius, onApply
           </div>
 
           {/* ── Selector de radio ── */}
-          <div style={s.inputBox}>
+          <div style={{ ...s.inputBox, marginBottom: 12 }}>
+            <Navigation size={15} color="#9ca3af" style={{ flexShrink: 0 }} />
+            <span style={{ fontSize: 13, color: "#9ca3af", flexShrink: 0 }}>Radio</span>
             <select
               value={localKm}
               onChange={(e) => setLocalKm(Number(e.target.value))}
@@ -185,43 +263,9 @@ export default function KmRadiusModal({ open, onClose, location, radius, onApply
           </div>
         </div>
 
-        {/* ── Mapa preview ── */}
+        {/* ── Visual de radio (sin Google Maps) ── */}
         <div style={s.mapWrap}>
-          {isLoaded ? (
-            <GoogleMap
-              mapContainerStyle={{ width: "100%", height: "100%" }}
-              center={mapCenter}
-              zoom={mapZoom}
-              options={{
-                fullscreenControl: false,
-                mapTypeControl: false,
-                streetViewControl: false,
-                zoomControl: false,
-                gestureHandling: "none",
-              }}
-            >
-              {localLoc && (
-                <>
-                  <Marker position={mapCenter} />
-                  {localKm < 99999 && (
-                    <Circle
-                      center={mapCenter}
-                      radius={localKm * 1000}
-                      options={{
-                        fillColor: "#2374e1",
-                        fillOpacity: 0.18,
-                        strokeColor: "#2374e1",
-                        strokeOpacity: 0.85,
-                        strokeWeight: 2,
-                      }}
-                    />
-                  )}
-                </>
-              )}
-            </GoogleMap>
-          ) : (
-            <div style={s.mapLoading}>🗺️ Cargando mapa…</div>
-          )}
+          <RadiusVisual city={localLoc?.name || null} km={localKm} />
         </div>
 
         {/* ── Botón aplicar ── */}
@@ -230,12 +274,14 @@ export default function KmRadiusModal({ open, onClose, location, radius, onApply
             type="button"
             style={{
               ...s.applyBtn,
-              opacity: localLoc ? 1 : 0.6,
+              opacity: localLoc ? 1 : 0.55,
               cursor: localLoc ? "pointer" : "default",
             }}
             onClick={handleApply}
           >
-            Aplicar
+            {localLoc
+              ? `Aplicar · ${localLoc.name}${localKm < 99999 ? ` · ${localKm} km` : ""}`
+              : "Selecciona una ciudad"}
           </button>
         </div>
 
@@ -248,7 +294,7 @@ export default function KmRadiusModal({ open, onClose, location, radius, onApply
 const s = {
   overlay: {
     position: "fixed", inset: 0,
-    background: "rgba(0,0,0,.70)",
+    background: "rgba(0,0,0,.72)",
     zIndex: 19000,
     display: "flex", justifyContent: "center", alignItems: "center",
     padding: 16,
@@ -256,11 +302,11 @@ const s = {
   modal: {
     width: "100%", maxWidth: 440,
     background: "#242526",
-    borderRadius: 16,
+    borderRadius: 18,
     color: "#e4e6eb",
     overflow: "hidden",
     display: "flex", flexDirection: "column",
-    maxHeight: "90vh",
+    maxHeight: "92vh",
   },
   header: {
     padding: "14px 16px",
@@ -290,11 +336,10 @@ const s = {
     padding: 2, display: "flex", alignItems: "center",
   },
   dropdown: {
-    position: "absolute", top: "100%", left: 0, right: 0, zIndex: 10,
+    position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, zIndex: 10,
     background: "#2d2e2f",
     border: "1px solid #3a3b3c",
     borderRadius: 10,
-    marginTop: 4,
     overflow: "hidden",
     boxShadow: "0 8px 24px rgba(0,0,0,0.5)",
   },
@@ -311,21 +356,13 @@ const s = {
     background: "none", border: "none", outline: "none",
     color: "#e4e6eb", fontSize: 14, fontWeight: 600,
     cursor: "pointer",
-    appearance: "none",
-    WebkitAppearance: "none",
   },
   mapWrap: {
-    margin: "12px 16px",
-    height: 220,
+    margin: "0 16px 0",
+    height: 180,
     borderRadius: 14,
     overflow: "hidden",
     flexShrink: 0,
-    background: "#18191a",
-  },
-  mapLoading: {
-    height: "100%",
-    display: "flex", alignItems: "center", justifyContent: "center",
-    color: "#9ca3af", fontSize: 13,
   },
   applyBtn: {
     width: "100%",
@@ -335,6 +372,7 @@ const s = {
     background: "#2374e1",
     color: "#fff",
     fontWeight: 700,
-    fontSize: 16,
+    fontSize: 15,
+    transition: "opacity 0.2s",
   },
 };
