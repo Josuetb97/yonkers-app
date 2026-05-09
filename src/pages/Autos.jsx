@@ -1,7 +1,8 @@
 import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, X, Car, MapPin, Settings, SlidersHorizontal } from "lucide-react";
+import { Search, X, Car, MapPin, Settings, SlidersHorizontal, Navigation } from "lucide-react";
 import { supabase } from "../lib/supabase";
+import NearbyMap from "../components/map/NearbyMap";
 
 const SUPER_ADMIN_EMAILS = [
   "josuetb19997@gmail.com",
@@ -91,6 +92,19 @@ function VehicleDetailModal({ vehicle, onClose }) {
     : null;
 
   const socials = SOCIAL_CONFIG.filter(({ key }) => vehicle[key] && String(vehicle[key]).trim());
+
+  // Coordenadas del autolote para el mapa
+  const coords = useMemo(() => {
+    const lat = Number(vehicle.autolote_lat);
+    const lng = Number(vehicle.autolote_lng);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+    if (lat === 0 && lng === 0) return null;
+    return { lat, lng };
+  }, [vehicle.autolote_lat, vehicle.autolote_lng]);
+
+  const mapsUrl = coords
+    ? `https://www.google.com/maps?q=${coords.lat},${coords.lng}`
+    : null;
 
   useEffect(() => {
     function onKey(e) { if (e.key === "Escape") onClose(); }
@@ -210,6 +224,29 @@ function VehicleDetailModal({ vehicle, onClose }) {
               </div>
             ))}
           </div>
+
+          {/* ── Mapa de ubicación del autolote ── */}
+          {coords ? (
+            <div>
+              <div style={md.mapLabel}>
+                <MapPin size={12} color="#6b7280" />
+                Ubicación del autolote
+              </div>
+              <div style={md.mapWrap}>
+                <NearbyMap
+                  pieces={[{ id: vehicle.id, lat: coords.lat, lng: coords.lng, title: vehicle.autolote_name || "Autolote" }]}
+                  center={coords}
+                  selectedId={vehicle.id}
+                  onSelectId={() => {}}
+                />
+              </div>
+            </div>
+          ) : (
+            <div style={md.noCoords}>
+              📍 Este autolote aún no tiene ubicación registrada
+            </div>
+          )}
+
         </div>
 
         {/* ── Footer fijo — siempre visible ── */}
@@ -221,6 +258,11 @@ function VehicleDetailModal({ vehicle, onClose }) {
             </a>
           ) : (
             <div style={md.noContact}>Sin número de contacto registrado</div>
+          )}
+          {mapsUrl && (
+            <a href={mapsUrl} target="_blank" rel="noopener noreferrer" style={md.routeBtn} title="Cómo llegar">
+              <Navigation size={18} />
+            </a>
           )}
         </div>
 
@@ -357,7 +399,7 @@ export default function Autos({ user }) {
       if (ownerIds.length > 0) {
         const { data: pData } = await supabase
           .from("autolote_profiles")
-          .select("owner_id, name, city, whatsapp, instagram, facebook, verified")
+          .select("owner_id, name, city, whatsapp, instagram, facebook, tiktok, verified, lat, lng")
           .in("owner_id", ownerIds)
           .eq("status", "approved");
         (pData || []).forEach((p) => { profiles[p.owner_id] = p; });
@@ -373,6 +415,8 @@ export default function Autos({ user }) {
             autolote_name:     p.name     || null,
             autolote_city:     p.city     || null,
             autolote_verified: p.verified || false,
+            autolote_lat:      p.lat      || null,
+            autolote_lng:      p.lng      || null,
             instagram:         p.instagram || null,
             facebook:          p.facebook  || null,
             tiktok:            p.tiktok    || null,
@@ -601,19 +645,18 @@ const md = {
   overlay: {
     position: "fixed", inset: 0, zIndex: 9000,
     background: "rgba(0,0,0,0.55)", backdropFilter: "blur(4px)",
-    display: "flex", alignItems: "flex-end", justifyContent: "center",
-    /* Padding inferior para no quedar detrás del BottomNav */
-    paddingBottom: 60,
+    display: "flex", alignItems: "center", justifyContent: "center",
+    /* Padding inferior para no solapar el BottomNav, lateral para móvil */
+    padding: "12px 10px 72px",
   },
-  /* El sheet NO hace scroll — solo el body interior */
+  /* Sheet centrado con bordes redondeados en todos los lados */
   sheet: {
-    background: "#fff", borderRadius: "22px 22px 0 0",
-    width: "100%", maxWidth: 560,
-    /* Máximo hasta donde empieza el BottomNav (60px) + margen */
-    maxHeight: "calc(92vh - 60px)",
+    background: "#fff", borderRadius: 22,
+    width: "100%", maxWidth: 520,
+    maxHeight: "100%",
     overflow: "hidden",
     display: "flex", flexDirection: "column",
-    boxShadow: "0 -8px 40px rgba(0,0,0,0.18)",
+    boxShadow: "0 12px 48px rgba(0,0,0,0.22), 0 4px 16px rgba(0,0,0,0.1)",
   },
   imgWrap: {
     position: "relative", width: "100%", height: 190,
@@ -712,17 +755,46 @@ const md = {
 
   /* Footer SIEMPRE visible — no hace scroll */
   footer: {
-    padding: "14px 18px calc(14px + env(safe-area-inset-bottom, 0px))",
+    padding: "12px 16px",
     borderTop: "1px solid #f1f5f9",
     background: "#fff", flexShrink: 0,
+    display: "flex", gap: 10, alignItems: "center",
   },
   waBtn: {
+    flex: 1,
     display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
-    width: "100%", padding: "14px 0", borderRadius: 14,
+    padding: "13px 0", borderRadius: 14,
     background: "#16a34a", color: "#fff",
-    fontSize: 16, fontWeight: 700, textDecoration: "none",
+    fontSize: 15, fontWeight: 700, textDecoration: "none",
   },
-  noContact: { textAlign: "center", color: "#9ca3af", fontSize: 13, padding: "10px 0" },
+  routeBtn: {
+    flexShrink: 0,
+    width: 48, height: 48, borderRadius: 14,
+    background: "#1e3a8a", color: "#fff",
+    display: "flex", alignItems: "center", justifyContent: "center",
+    textDecoration: "none",
+    boxShadow: "0 2px 8px rgba(30,58,138,0.3)",
+  },
+  noContact: { flex: 1, textAlign: "center", color: "#9ca3af", fontSize: 13, padding: "10px 0" },
+
+  /* Mapa */
+  mapLabel: {
+    display: "flex", alignItems: "center", gap: 5,
+    fontSize: 11, fontWeight: 700, color: "#6b7280",
+    letterSpacing: "0.04em", textTransform: "uppercase",
+    marginBottom: 8,
+  },
+  mapWrap: {
+    width: "100%", height: 180, borderRadius: 14,
+    overflow: "hidden", border: "1px solid #e2e8f0",
+    marginBottom: 4,
+  },
+  noCoords: {
+    fontSize: 12, color: "#94a3b8",
+    background: "#f8fafc", border: "1px solid #e2e8f0",
+    borderRadius: 12, padding: "10px 14px",
+    marginBottom: 4,
+  },
 };
 
 /* ════ VehicleCard styles ════ */
