@@ -635,21 +635,8 @@ export default function Autos({ user }) {
                 style={{ ...pg.chip, ...(showCustom ? pg.chipActive : {}), gap: 5, display: "flex", alignItems: "center" }}
                 onClick={() => { setShowCustom((v) => !v); setBudgetIdx(0); }}>
                 <SlidersHorizontal size={11} />
-                Rango
+                Presupuesto
               </button>
-
-              {/* Separador + Limpiar — solo si hay filtros activos */}
-              {activeFilters > 0 && (
-                <>
-                  <div style={{ width: 1, background: "#e2e8f0", flexShrink: 0, margin: "2px 0" }} />
-                  <button
-                    style={{ ...pg.chip, color: "#ef4444", gap: 4, display: "flex", alignItems: "center" }}
-                    onClick={clearAll}
-                  >
-                    <X size={10} /> Limpiar
-                  </button>
-                </>
-              )}
             </div>
           </div>
 
