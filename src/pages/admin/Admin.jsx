@@ -38,11 +38,11 @@ const SOCIAL_FIELDS = [
 ];
 
 /** Claves del perfil para auto-guardado */
-const PROFILE_KEYS = ["yonker", "city", "lat", "lng", "instagram", "facebook", "tiktok"];
+const PROFILE_KEYS = ["yonker", "city", "whatsapp", "lat", "lng", "instagram", "facebook", "tiktok"];
 
 const EMPTY_FORM = {
   title: "", brand: "", years: "", yonker: "", city: "",
-  price: "", condition: "", lat: "", lng: "",
+  whatsapp: "", price: "", condition: "", lat: "", lng: "",
   instagram: "", facebook: "", tiktok: "",
 };
 
@@ -410,7 +410,7 @@ export default function Admin() {
     const profile = {};
     PROFILE_KEYS.forEach((k) => { profile[k] = form[k] || ""; });
     localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
-  }, [form.yonker, form.city, form.lat, form.lng, form.instagram, form.facebook, form.tiktok]);
+  }, [form.yonker, form.city, form.whatsapp, form.lat, form.lng, form.instagram, form.facebook, form.tiktok]);
 
   /* ── Cargar perfil y verificar estado de aprobación ── */
   async function loadProfile(user) {
@@ -425,7 +425,7 @@ export default function Admin() {
     try {
       const { data } = await supabase
         .from("yonkers")
-        .select("name, city, lat, lng, instagram, facebook, tiktok, status, rejection_reason")
+        .select("name, city, whatsapp, lat, lng, instagram, facebook, tiktok, status, rejection_reason")
         .eq("owner_id", user.id)
         .maybeSingle();
 
@@ -441,6 +441,7 @@ export default function Admin() {
         const profile = {
           yonker:    data.name      || "",
           city:      data.city      || "",
+          whatsapp:  data.whatsapp  || "",
           lat:       data.lat       ? String(data.lat) : "",
           lng:       data.lng       ? String(data.lng) : "",
           instagram: data.instagram || "",
@@ -630,9 +631,10 @@ export default function Admin() {
     e.preventDefault();
     setMsg({ text: "", type: "" });
 
-    if (!form.title.trim())  { setMsg({ text: "El nombre de la pieza es obligatorio.", type: "error" }); return; }
-    if (!form.brand.trim())  { setMsg({ text: "La marca / modelo es obligatoria.", type: "error" }); return; }
-    if (!form.yonker.trim()) { setMsg({ text: "El nombre del yonker es obligatorio.", type: "error" }); return; }
+    if (!form.title.trim())    { setMsg({ text: "El nombre de la pieza es obligatorio.", type: "error" }); return; }
+    if (!form.brand.trim())    { setMsg({ text: "La marca / modelo es obligatoria.", type: "error" }); return; }
+    if (!form.yonker.trim())   { setMsg({ text: "El nombre del yonker es obligatorio.", type: "error" }); return; }
+    if (!form.whatsapp.trim()) { setMsg({ text: "El número de WhatsApp es obligatorio para que los clientes puedan contactarte.", type: "error" }); return; }
 
     setSaving(true);
     try {
@@ -655,7 +657,7 @@ export default function Admin() {
         yonker:    form.yonker.trim(),
         city:      form.city.trim(),
         condition: form.condition.trim(),
-        whatsapp:  "",
+        whatsapp:  form.whatsapp.trim(),
         images:    imageUrls,
         owner_id:  user.id,
       };
@@ -704,6 +706,7 @@ export default function Admin() {
       owner_id:  user.id,
       name:      form.yonker.trim(),
       city:      form.city      || "",
+      whatsapp:  form.whatsapp  || "",
       lat:       form.lat       ? parseFloat(form.lat)  : null,
       lng:       form.lng       ? parseFloat(form.lng)  : null,
       instagram: form.instagram || "",
@@ -732,12 +735,13 @@ export default function Admin() {
       title:     piece.title     ?? "",
       brand:     piece.brand     ?? "",
       years:     piece.years     ?? "",
-      yonker:    piece.yonker    ?? form.yonker ?? "",
-      city:      piece.city      ?? form.city   ?? "",
+      yonker:    piece.yonker    ?? form.yonker    ?? "",
+      city:      piece.city      ?? form.city      ?? "",
+      whatsapp:  piece.whatsapp  ?? form.whatsapp  ?? "",
       price:     piece.price != null ? String(piece.price) : "",
       condition: piece.condition ?? "",
-      lat:       piece.lat       ?? form.lat    ?? "",
-      lng:       piece.lng       ?? form.lng    ?? "",
+      lat:       piece.lat       ?? form.lat       ?? "",
+      lng:       piece.lng       ?? form.lng       ?? "",
       instagram: piece.instagram ?? form.instagram ?? "",
       facebook:  piece.facebook  ?? form.facebook  ?? "",
       tiktok:    piece.tiktok    ?? form.tiktok    ?? "",
@@ -1060,6 +1064,38 @@ export default function Admin() {
                     {PROFILE_FIELDS_CONFIG.map((field) => (
                       <Field key={field.name} field={field} value={form[field.name]} onChange={handleChange} dimmed={false} />
                     ))}
+                  </div>
+
+                  {/* WhatsApp */}
+                  <div style={sc.fieldWrap}>
+                    <label style={sc.label}>
+                      WhatsApp <span style={{ color: "#ef4444" }}>*</span>
+                    </label>
+                    <div style={{
+                      display: "flex", alignItems: "center",
+                      borderRadius: 9, borderWidth: "1.5px", borderStyle: "solid",
+                      borderColor: form.whatsapp ? "#86efac" : "#e2e8f0",
+                      background: form.whatsapp ? "#f0fdf4" : "#fff",
+                      overflow: "hidden", transition: "border-color .15s, box-shadow .15s",
+                    }}>
+                      <div style={{
+                        flexShrink: 0, width: 40, height: 38,
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        background: "#25D36612", borderRight: "1.5px solid #25D36625",
+                        fontSize: 9, fontWeight: 800, color: "#25D366", letterSpacing: "0.04em",
+                      }}>WA</div>
+                      <input
+                        name="whatsapp"
+                        value={form.whatsapp}
+                        onChange={handleChange}
+                        placeholder="Ej: 50498765432"
+                        type="tel"
+                        style={{ flex: 1, height: 38, padding: "0 12px", border: "none", outline: "none", fontSize: 13, color: "#0f172a", background: "transparent", fontFamily: "system-ui, sans-serif" }}
+                      />
+                    </div>
+                    <div style={{ fontSize: 10, color: "#64748b", marginTop: 2 }}>
+                      Número con código de país. Ej: 504 + número. Los clientes te contactarán aquí.
+                    </div>
                   </div>
 
                   {/* Ubicación */}
