@@ -333,9 +333,9 @@ export default function KmRadiusModal({ open, onClose, location, radius, onApply
               style={s.select}
             >
               {RADIUS_OPTIONS.map((k) => (
-                <option key={k} value={k}>{k} kilómetros</option>
+                <option key={k} value={k} style={{ color: "#111", background: "#fff" }}>{k} kilómetros</option>
               ))}
-              <option value={99999}>Todo el país</option>
+              <option value={99999} style={{ color: "#111", background: "#fff" }}>Todo el país</option>
             </select>
           </div>
         </div>
