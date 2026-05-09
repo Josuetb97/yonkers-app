@@ -86,8 +86,12 @@ export default function RequestNeed() {
 
   async function handleSubmit(e) {
     e.preventDefault();
-    if (!form.title.trim() || !form.whatsapp.trim()) {
-      alert("La pieza y el WhatsApp son obligatorios.");
+    if (!form.title.trim()) {
+      alert("El nombre de la pieza es obligatorio.");
+      return;
+    }
+    if (!form.whatsapp.trim()) {
+      alert("⚠️ Debes ingresar tu número de WhatsApp para que los yonkers puedan contactarte.");
       return;
     }
     setSaving(true);
@@ -445,9 +449,28 @@ export default function RequestNeed() {
           <SectionTitle>Datos de contacto</SectionTitle>
 
           <div style={st.sectionBody}>
+
+            {/* Aviso explicativo */}
+            <div style={{
+              display: "flex", alignItems: "flex-start", gap: 10,
+              background: "#f0fdf4", border: "1px solid #bbf7d0",
+              borderRadius: 12, padding: "12px 14px", marginBottom: 8,
+            }}>
+              <span style={{ fontSize: 20, flexShrink: 0 }}>📲</span>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "#166534", marginBottom: 2 }}>
+                  ¿Cómo te contactarán los yonkers?
+                </div>
+                <div style={{ fontSize: 12, color: "#15803d", lineHeight: 1.5 }}>
+                  Ingresa tu número de WhatsApp para que los yonkers que tengan la pieza
+                  te escriban <strong>directamente</strong>. Sin este número no podrán encontrarte.
+                </div>
+              </div>
+            </div>
+
             <div style={st.field}>
               <label style={st.label}>
-                Número de WhatsApp <span style={{ color: "#ff4d4f" }}>*</span>
+                Tu número de WhatsApp <span style={{ color: "#ff4d4f" }}>*</span>
               </label>
               <div style={{ position: "relative" }}>
                 <div style={st.waBadge}>
