@@ -1,7 +1,5 @@
 import { X, MapPin, Navigation, LocateFixed, Loader } from "lucide-react";
 import { useState, useMemo } from "react";
-import { GoogleMap, Marker, Circle } from "@react-google-maps/api";
-import { useMaps } from "../../contexts/MapsContext";
 
 /* ─────────────────────────────────────────────────────────
    Ciudades de Honduras con coordenadas
@@ -168,7 +166,6 @@ export default function KmRadiusModal({ open, onClose, location, radius, onApply
   const [showDrop,   setShowDrop]   = useState(false);
   const [gpsLoading, setGpsLoading] = useState(false);
   const [gpsError,   setGpsError]   = useState("");
-  const { isLoaded } = useMaps();
 
   /* ── Usar ubicación del dispositivo ── */
   function useDeviceLocation() {
@@ -343,26 +340,21 @@ export default function KmRadiusModal({ open, onClose, location, radius, onApply
           </div>
         </div>
 
-        {/* ── Mapa con Google Maps + círculo de radio ── */}
+        {/* ── Mapa preview (OpenStreetMap) ── */}
         <div style={s.mapWrap}>
-          {localLoc && isLoaded ? (
-            <GoogleMap
-              mapContainerStyle={{ width: "100%", height: "100%" }}
-              center={{ lat: localLoc.lat, lng: localLoc.lng }}
-              zoom={localKm <= 20 ? 11 : localKm <= 60 ? 9 : localKm <= 120 ? 8 : 7}
-              options={{ fullscreenControl: false, mapTypeControl: false, streetViewControl: false, zoomControl: false, gestureHandling: "none" }}
-            >
-              <Marker position={{ lat: localLoc.lat, lng: localLoc.lng }} />
-              {localKm < 99999 && (
-                <Circle
-                  center={{ lat: localLoc.lat, lng: localLoc.lng }}
-                  radius={localKm * 1000}
-                  options={{ fillColor: "#2374e1", fillOpacity: 0.15, strokeColor: "#2374e1", strokeOpacity: 0.8, strokeWeight: 2 }}
-                />
-              )}
-            </GoogleMap>
-          ) : (
-            <RadiusVisual city={localLoc?.name ?? null} km={localKm} />
+          {localLoc ? (() => {
+            const offset = Math.min(2.5, Math.max(0.08, localKm / 111));
+            const bbox = `${localLoc.lng - offset},${localLoc.lat - offset},${localLoc.lng + offset},${localLoc.lat + offset}`;
+            return (
+              <iframe
+                title="Mapa de ubicación"
+                src={`https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${localLoc.lat},${localLoc.lng}`}
+                style={{ width: "100%", height: "100%", border: "none", display: "block" }}
+                loading="lazy"
+              />
+            );
+          })() : (
+            <RadiusVisual city={null} km={localKm} />
           )}
         </div>
 
