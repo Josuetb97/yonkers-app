@@ -1,7 +1,5 @@
 import { X, MapPin, Navigation, LocateFixed, Loader } from "lucide-react";
 import { useState, useMemo } from "react";
-import { GoogleMap, Circle, Marker } from "@react-google-maps/api";
-import { useMaps } from "../../contexts/MapsContext";
 
 /* ─────────────────────────────────────────────────────────
    Ciudades de Honduras con coordenadas
@@ -168,7 +166,6 @@ export default function KmRadiusModal({ open, onClose, location, radius, onApply
   const [showDrop,   setShowDrop]   = useState(false);
   const [gpsLoading, setGpsLoading] = useState(false);
   const [gpsError,   setGpsError]   = useState("");
-  const { isLoaded } = useMaps();
 
   /* ── Usar ubicación del dispositivo ── */
   function useDeviceLocation() {
@@ -343,36 +340,14 @@ export default function KmRadiusModal({ open, onClose, location, radius, onApply
           </div>
         </div>
 
-        {/* ── Mapa real con círculo de radio ── */}
+        {/* ── Mapa preview (Static Maps API — sin conflictos JS) ── */}
         <div style={s.mapWrap}>
-          {localLoc && isLoaded ? (
-            <GoogleMap
-              mapContainerStyle={{ width: "100%", height: "100%" }}
-              center={{ lat: localLoc.lat, lng: localLoc.lng }}
-              zoom={localKm <= 20 ? 11 : localKm <= 60 ? 9 : localKm <= 120 ? 8 : 7}
-              options={{
-                fullscreenControl: false,
-                mapTypeControl: false,
-                streetViewControl: false,
-                zoomControl: false,
-                gestureHandling: "none",
-              }}
-            >
-              <Marker position={{ lat: localLoc.lat, lng: localLoc.lng }} />
-              {localKm < 99999 && (
-                <Circle
-                  center={{ lat: localLoc.lat, lng: localLoc.lng }}
-                  radius={localKm * 1000}
-                  options={{
-                    fillColor: "#2374e1",
-                    fillOpacity: 0.15,
-                    strokeColor: "#2374e1",
-                    strokeOpacity: 0.8,
-                    strokeWeight: 2,
-                  }}
-                />
-              )}
-            </GoogleMap>
+          {localLoc ? (
+            <img
+              src={`https://maps.googleapis.com/maps/api/staticmap?center=${localLoc.lat},${localLoc.lng}&zoom=${localKm <= 20 ? 11 : localKm <= 60 ? 9 : localKm <= 120 ? 8 : 7}&size=400x200&markers=color:blue%7C${localLoc.lat},${localLoc.lng}&style=feature:poi%7Cvisibility:off&key=${import.meta.env.VITE_GOOGLE_MAPS_KEY}`}
+              style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+              alt="Mapa de ubicación"
+            />
           ) : (
             <RadiusVisual city={null} km={localKm} />
           )}
